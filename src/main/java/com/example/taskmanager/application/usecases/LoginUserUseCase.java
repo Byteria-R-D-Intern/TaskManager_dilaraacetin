@@ -1,11 +1,12 @@
 package com.example.taskmanager.application.usecases;
 
+import java.util.Optional;
+
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
 import com.example.taskmanager.config.JwtUtil;
 import com.example.taskmanager.domain.model.User;
 import com.example.taskmanager.domain.ports.UserRepository;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-
-import java.util.Optional;
 
 public class LoginUserUseCase {
 
@@ -31,6 +32,6 @@ public class LoginUserUseCase {
             throw new IllegalArgumentException("Invalid credentials");
         }
 
-        return jwtUtil.generateToken(user.getEmail());
+        return jwtUtil.generateToken(user.getId());
     }
 }
