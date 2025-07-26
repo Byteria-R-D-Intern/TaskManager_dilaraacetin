@@ -1,11 +1,12 @@
 package com.example.taskmanager.infrastructure.repository;
 
+import java.util.Optional;
+
+import org.springframework.stereotype.Component;
+
 import com.example.taskmanager.domain.model.User;
 import com.example.taskmanager.domain.ports.UserRepository;
 import com.example.taskmanager.infrastructure.entity.UserEntity;
-import org.springframework.stereotype.Component;
-
-import java.util.Optional;
 
 @Component
 public class UserRepositoryImpl implements UserRepository {
@@ -25,6 +26,10 @@ public class UserRepositoryImpl implements UserRepository {
     public User save(User user) {
         UserEntity savedEntity = jpaUserRepository.save(toEntity(user));
         return toDomain(savedEntity);
+    }
+    @Override
+    public Optional<User> findById(Long id) {
+        return jpaUserRepository.findById(id).map(this::toDomain);
     }
 
     private User toDomain(UserEntity entity) {

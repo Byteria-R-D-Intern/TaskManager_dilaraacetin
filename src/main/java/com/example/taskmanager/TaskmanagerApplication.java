@@ -17,13 +17,6 @@ public class TaskmanagerApplication {
     public static void main(String[] args) {
         SpringApplication.run(TaskmanagerApplication.class, args);
     }
-
-
-    @Bean
-    public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
     @Bean
     public RegisterUserUseCase registerUserUseCase(UserRepository userRepository,
                                                    BCryptPasswordEncoder passwordEncoder) {

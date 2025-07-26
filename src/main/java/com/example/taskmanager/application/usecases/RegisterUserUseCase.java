@@ -1,5 +1,7 @@
 package com.example.taskmanager.application.usecases;
 
+import java.util.Optional;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import com.example.taskmanager.domain.model.User;
@@ -9,6 +11,11 @@ public class RegisterUserUseCase {
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+    
+    public Optional<User> getUserById(Long id) {
+        return userRepository.findById(id);
+    }
+
 
     public RegisterUserUseCase(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
