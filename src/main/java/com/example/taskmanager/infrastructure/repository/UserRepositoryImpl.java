@@ -2,13 +2,14 @@ package com.example.taskmanager.infrastructure.repository;
 
 import java.util.Optional;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import com.example.taskmanager.domain.model.User;
 import com.example.taskmanager.domain.ports.UserRepository;
 import com.example.taskmanager.infrastructure.entity.UserEntity;
+import com.example.taskmanager.infrastructure.mapper.UserMapper;
 
-@Component
+@Repository
 public class UserRepositoryImpl implements UserRepository {
 
     private final JpaUserRepository jpaUserRepository;
@@ -18,37 +19,24 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
-    public Optional<User> findByEmail(String email) {
-        return jpaUserRepository.findByEmail(email).map(this::toDomain);
+    public User save(User user) {
+        UserEntity entity = UserMapper.toEntity(user);
+        UserEntity saved = jpaUserRepository.save(entity);
+        return UserMapper.toDomain(saved);
     }
 
     @Override
-    public User save(User user) {
-        UserEntity savedEntity = jpaUserRepository.save(toEntity(user));
-        return toDomain(savedEntity);
+    public Optional<User> findByEmail(String email) {
+        return jpaUserRepository.findByEmail(email)
+                .map(UserMapper::toDomain);
     }
+
     @Override
     public Optional<User> findById(Long id) {
-        return jpaUserRepository.findById(id).map(this::toDomain);
+        return jpaUserRepository.findById(id)
+                .map(UserMapper::toDomain);
     }
 
-    private User toDomain(UserEntity entity) {
-        return new User(
-            entity.getId(),
-            entity.getUsername(),
-            entity.getEmail(),
-            entity.getPassword()
-        );
-    }
-
-    private UserEntity toEntity(User user) {
-        return new UserEntity(
-            user.getId(),
-            user.getUsername(),
-            user.getEmail(),
-            user.getPassword()
-        );
-    }
     @Override
     public void deleteById(Long id) {
         jpaUserRepository.deleteById(id);
