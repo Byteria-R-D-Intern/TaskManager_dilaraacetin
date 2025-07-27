@@ -16,7 +16,6 @@ public class RegisterUserUseCase {
         return userRepository.findById(id);
     }
 
-
     public RegisterUserUseCase(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -32,4 +31,12 @@ public class RegisterUserUseCase {
 
         return userRepository.save(user);
     }
+    public User updateUser(User user) {
+        return userRepository.save(user);
+    }
+
+    public void deleteUser(Long id) {
+        userRepository.deleteById(id);
+    }
+
 }

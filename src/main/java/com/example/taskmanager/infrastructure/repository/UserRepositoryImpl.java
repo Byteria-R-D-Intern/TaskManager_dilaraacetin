@@ -49,4 +49,8 @@ public class UserRepositoryImpl implements UserRepository {
             user.getPassword()
         );
     }
+    @Override
+    public void deleteById(Long id) {
+        jpaUserRepository.deleteById(id);
+    }
 }
