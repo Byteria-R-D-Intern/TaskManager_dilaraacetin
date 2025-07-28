@@ -1,11 +1,14 @@
 package com.example.taskmanager.infrastructure.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.example.taskmanager.domain.model.Task;
 import com.example.taskmanager.infrastructure.entity.TaskEntity;
 
+@Component
 public class TaskMapper {
 
-    public static TaskEntity toEntity(Task task) {
+    public TaskEntity toEntity(Task task) {
         return new TaskEntity(
             task.getId(),
             task.getTitle(),
@@ -15,7 +18,7 @@ public class TaskMapper {
         );
     }
 
-    public static Task toDomain(TaskEntity entity) {
+    public Task toDomain(TaskEntity entity) {
         return new Task(
             entity.getId(),
             entity.getTitle(),
