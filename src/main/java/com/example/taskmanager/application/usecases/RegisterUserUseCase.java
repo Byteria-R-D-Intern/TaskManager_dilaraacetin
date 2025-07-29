@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import com.example.taskmanager.domain.exception.ConflictException;
 import com.example.taskmanager.domain.model.User;
 import com.example.taskmanager.domain.ports.UserRepository;
 
@@ -23,7 +24,7 @@ public class RegisterUserUseCase {
 
     public User register(User user) {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("Email already in use");
+            throw new ConflictException("Email is already in use");
         }
 
         String hashedPassword = passwordEncoder.encode(user.getPassword());

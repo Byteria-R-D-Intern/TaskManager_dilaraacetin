@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,9 +16,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.taskmanager.adapters.web.dto.LoginRequest;
 import com.example.taskmanager.adapters.web.dto.LoginResponse;
+import com.example.taskmanager.adapters.web.dto.UserRequest;
+import com.example.taskmanager.adapters.web.dto.UserUpdateRequest;
 import com.example.taskmanager.application.usecases.LoginUserUseCase;
 import com.example.taskmanager.application.usecases.RegisterUserUseCase;
 import com.example.taskmanager.domain.model.User;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api")
@@ -33,17 +38,15 @@ public class UserController {
     }
 
     @PostMapping("/auth/register")
-    public ResponseEntity<?> register(@RequestBody User user) {
-        try {
-            User registeredUser = registerUserUseCase.register(user);
-            return new ResponseEntity<>(registeredUser, HttpStatus.CREATED);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-        }
+    public ResponseEntity<?> register(@Valid @RequestBody UserRequest userRequest) {
+        User user = new User(null, userRequest.getUsername(), userRequest.getEmail(), userRequest.getPassword());
+        User registeredUser = registerUserUseCase.register(user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(registeredUser);
     }
 
+
     @PostMapping("/auth/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {
             String token = loginUserUseCase.login(request.getEmail(), request.getPassword());
             return ResponseEntity.ok(new LoginResponse(token));
@@ -53,44 +56,63 @@ public class UserController {
     }
 
     @GetMapping("/users/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id) {
-        Optional<User> userOpt = registerUserUseCase.getUserById(id);
-
-        if (userOpt.isPresent()) {
-            return ResponseEntity.ok(userOpt.get());
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
-        }
-    }
-    @PutMapping("/users/{id}")
-    public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody User updatedUser) {
-        Optional<User> existingUserOpt = registerUserUseCase.getUserById(id);
-
-        if (existingUserOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
-        }
-
-        User existingUser = existingUserOpt.get();
-        existingUser.setUsername(updatedUser.getUsername());
-        existingUser.setEmail(updatedUser.getEmail());
-        existingUser.setPassword(updatedUser.getPassword()); // İsteğe göre encoder ekleyebilirsin
-
-        User savedUser = registerUserUseCase.updateUser(existingUser);
-        return ResponseEntity.ok(savedUser);
-    }
-    @DeleteMapping("/users/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<?> getUserById(@PathVariable Long id, Authentication authentication) {
         Optional<User> userOpt = registerUserUseCase.getUserById(id);
 
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
         }
 
-        registerUserUseCase.deleteUser(id);
-        return ResponseEntity.ok("User deleted");
+        Long userIdFromToken = (Long) authentication.getPrincipal();
+
+        if (!userIdFromToken.equals(id)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
+        }
+
+        return ResponseEntity.ok(userOpt.get());
+    }
+
+    @PutMapping("/users/{id}")
+    public ResponseEntity<?> updateUser(@PathVariable Long id,
+                                        @Valid @RequestBody UserUpdateRequest request,
+                                        Authentication authentication) {
+        Optional<User> existingUserOpt = registerUserUseCase.getUserById(id);
+
+        if (existingUserOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+
+        Long userIdFromToken = (Long) authentication.getPrincipal();
+
+        if (!userIdFromToken.equals(id)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
+        }
+
+        User existingUser = existingUserOpt.get();
+        existingUser.setUsername(request.getUsername());
+        existingUser.setEmail(request.getEmail());
+        existingUser.setPassword(request.getPassword()); // dilersen burada hash işlemi de yapılabilir
+
+        User savedUser = registerUserUseCase.updateUser(existingUser);
+        return ResponseEntity.ok(savedUser);
     }
 
 
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id, Authentication authentication) {
+        Optional<User> userOpt = registerUserUseCase.getUserById(id);
 
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
 
+        Long userIdFromToken = (Long) authentication.getPrincipal();
+
+        if (!userIdFromToken.equals(id)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
+        }
+
+        registerUserUseCase.deleteUser(id);
+        return ResponseEntity.noContent().build(); 
+    }
 }
