@@ -13,7 +13,9 @@ public class TaskMapper {
             task.getId(),
             task.getTitle(),
             task.getDescription(),
-            task.isCompleted(),
+            task.getStatus(),
+            task.getPriority(),
+            task.getDueDate(),
             task.getUserId()
         );
     }
@@ -23,7 +25,9 @@ public class TaskMapper {
             entity.getId(),
             entity.getTitle(),
             entity.getDescription(),
-            entity.isCompleted(),
+            entity.getStatus(),
+            entity.getPriority(),
+            entity.getDueDate(),
             entity.getUserId()
         );
     }

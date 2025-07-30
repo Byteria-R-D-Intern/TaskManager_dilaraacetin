@@ -4,7 +4,7 @@ A personal task management REST API built with **Spring Boot**, **MySQL**, **JWT
 
 ---
 
-## Installation & Run
+## 🛠️ Installation & Run
 
 ### 1. Clone the repository
 
@@ -19,7 +19,7 @@ cd taskmanager
 CREATE DATABASE taskmanager_db;
 ```
 
-### 3. Configure application.properties
+### 3. Configure `application.properties`
 
 Create the file: `src/main/resources/application.properties`
 
@@ -51,9 +51,9 @@ http://localhost:8080
 
 ---
 
-## Authentication
+## 🔐 Authentication
 
-###  Register
+### Register
 
 `POST /api/auth/register`
 
@@ -77,6 +77,7 @@ http://localhost:8080
 ```
 
 **Returns:**
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiJ9..."
@@ -85,17 +86,20 @@ http://localhost:8080
 
 ---
 
-## User Endpoints (Requires JWT Token)
+## 👤 User Endpoints (Requires JWT Token)
 
- Add this header to all requests:
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
+> Add this header to all user and task requests:
+> 
+> ```
+> Authorization: Bearer YOUR_JWT_TOKEN
+> ```
 
 ### Get user by ID
+
 `GET /api/users/{id}`
 
 ### Update user
+
 `PUT /api/users/{id}`
 
 ```json
@@ -107,8 +111,57 @@ Authorization: Bearer YOUR_JWT_TOKEN
 ```
 
 ### Delete user
+
 `DELETE /api/users/{id}`
 
 ---
 
+## 📋 Task Endpoints (Requires JWT Token)
 
+### Create Task
+
+`POST /api/tasks`
+
+```json
+{
+  "title": "Study",
+  "description": "Read Spring docs",
+  "status": "TODO",
+  "priority": "HIGH",
+  "dueDate": "2025-08-01"
+}
+```
+---
+
+### Get Tasks for Current User
+
+`GET /api/tasks`
+
+---
+
+### Update Task
+
+`PUT /api/tasks`
+
+```json
+{
+  "id": 3,
+  "title": "Study Updated",
+  "description": "Read updated docs",
+  "status": "IN_PROGRESS",
+  "priority": "MEDIUM",
+  "dueDate": "2025-08-05"
+}
+```
+---
+
+### Delete Task
+
+`DELETE /api/tasks`
+
+```json
+{
+  "id": 3
+}
+```
+---

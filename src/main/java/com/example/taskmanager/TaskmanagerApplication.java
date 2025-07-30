@@ -5,9 +5,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import com.example.taskmanager.application.usecases.CreateTaskUseCase;
+import com.example.taskmanager.application.usecases.GetTasksByUserUseCase;
 import com.example.taskmanager.application.usecases.LoginUserUseCase;
 import com.example.taskmanager.application.usecases.RegisterUserUseCase;
+import com.example.taskmanager.application.usecases.UpdateTaskUseCase;
 import com.example.taskmanager.config.JwtUtil;
+import com.example.taskmanager.domain.ports.TaskRepository;
 import com.example.taskmanager.domain.ports.UserRepository;
 
 
@@ -28,5 +32,18 @@ public class TaskmanagerApplication {
                                             JwtUtil jwtUtil) {
         return new LoginUserUseCase(userRepository, passwordEncoder, jwtUtil);
     }
+    @Bean
+    public CreateTaskUseCase createTaskUseCase(TaskRepository taskRepository) {
+        return new CreateTaskUseCase(taskRepository);
+    }
+    @Bean
+    public GetTasksByUserUseCase getTasksByUserUseCase(TaskRepository taskRepository) {
+        return new GetTasksByUserUseCase(taskRepository);
+    }
+    @Bean
+    public UpdateTaskUseCase updateTaskUseCase(TaskRepository taskRepository) {
+        return new UpdateTaskUseCase(taskRepository);
+    }
+
 
 }

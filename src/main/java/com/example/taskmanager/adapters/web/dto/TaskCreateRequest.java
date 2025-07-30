@@ -1,32 +1,28 @@
-package com.example.taskmanager.domain.model;
+package com.example.taskmanager.adapters.web.dto;
 
 import java.time.LocalDate;
 
-public class Task {
+import com.example.taskmanager.domain.model.TaskPriority;
+import com.example.taskmanager.domain.model.TaskStatus;
 
-    private Long id;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+public class TaskCreateRequest {
+
+    @NotBlank(message = "Title is required")
     private String title;
+
+    @NotBlank(message = "Description is required")
     private String description;
+
+    @NotNull(message = "Status is required")
     private TaskStatus status;
+
+    @NotNull(message = "Priority is required")
     private TaskPriority priority;
+
     private LocalDate dueDate; 
-    private Long userId;
-
-    public Task() {}
-
-    public Task(Long id, String title, String description, TaskStatus status,
-                TaskPriority priority, LocalDate dueDate, Long userId) {
-        this.id = id;
-        this.title = title;
-        this.description = description;
-        this.status = status;
-        this.priority = priority;
-        this.dueDate = dueDate;
-        this.userId = userId;
-    }
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
@@ -42,7 +38,4 @@ public class Task {
 
     public LocalDate getDueDate() { return dueDate; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
-
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
 }
