@@ -18,6 +18,7 @@ import com.example.taskmanager.adapters.web.dto.TaskCreateRequest;
 import com.example.taskmanager.adapters.web.dto.TaskDeleteRequest;
 import com.example.taskmanager.adapters.web.dto.TaskResponse;
 import com.example.taskmanager.adapters.web.dto.TaskUpdateRequest;
+import com.example.taskmanager.application.usecases.ActionLogService;
 import com.example.taskmanager.application.usecases.CreateTaskUseCase;
 import com.example.taskmanager.application.usecases.GetTasksByUserUseCase;
 import com.example.taskmanager.application.usecases.UpdateTaskUseCase;
@@ -34,19 +35,20 @@ public class TaskController {
     private final GetTasksByUserUseCase getTasksByUserUseCase;
     private final UpdateTaskUseCase updateTaskUseCase;
     private final DeleteTaskUseCase deleteTaskUseCase;
+    private final ActionLogService logService;
 
-
-    public TaskController(CreateTaskUseCase createTaskUseCase,
-                      GetTasksByUserUseCase getTasksByUserUseCase,
-                      UpdateTaskUseCase updateTaskUseCase,
-                      DeleteTaskUseCase deleteTaskUseCase) {
-    this.createTaskUseCase = createTaskUseCase;
-    this.getTasksByUserUseCase = getTasksByUserUseCase;
-    this.updateTaskUseCase = updateTaskUseCase;
-    this.deleteTaskUseCase = deleteTaskUseCase;
-}
-
-
+    public TaskController(
+            CreateTaskUseCase createTaskUseCase,
+            GetTasksByUserUseCase getTasksByUserUseCase,
+            UpdateTaskUseCase updateTaskUseCase,
+            DeleteTaskUseCase deleteTaskUseCase,
+            ActionLogService logService) {
+        this.createTaskUseCase = createTaskUseCase;
+        this.getTasksByUserUseCase = getTasksByUserUseCase;
+        this.updateTaskUseCase = updateTaskUseCase;
+        this.deleteTaskUseCase = deleteTaskUseCase;
+        this.logService = logService;
+    }
 
     @PostMapping
     public ResponseEntity<TaskResponse> createTask(@Valid @RequestBody TaskCreateRequest request,
@@ -64,6 +66,9 @@ public class TaskController {
         );
 
         Task created = createTaskUseCase.create(task);
+
+        // Log action
+        logService.log(userId, "CREATE", "Task", created.getId());
 
         TaskResponse response = new TaskResponse(
             created.getId(),
@@ -123,6 +128,9 @@ public class TaskController {
 
         Task updated = updateTaskUseCase.update(task);
 
+        // Log action
+        logService.log(userId, "UPDATE", "Task", updated.getId());
+
         TaskResponse response = new TaskResponse(
             updated.getId(),
             updated.getTitle(),
@@ -154,10 +162,10 @@ public class TaskController {
         }
 
         deleteTaskUseCase.delete(taskId);
+
+        // Log action
+        logService.log(userId, "DELETE", "Task", taskId);
+
         return ResponseEntity.noContent().build();
     }
-
-
-
-
 }

@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import com.example.taskmanager.domain.model.TaskPriority;
 import com.example.taskmanager.domain.model.TaskStatus;
 
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -22,7 +23,8 @@ public class TaskCreateRequest {
     @NotNull(message = "Priority is required")
     private TaskPriority priority;
 
-    private LocalDate dueDate; 
+    @FutureOrPresent(message = "Due date must be today or in the future")
+    private LocalDate dueDate;
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }

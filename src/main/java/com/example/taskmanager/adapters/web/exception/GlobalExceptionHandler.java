@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -35,5 +36,15 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(errors);
     }
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<String> handleEnumParseError(HttpMessageNotReadableException ex) {
+        if (ex.getMessage().contains("TaskStatus")) {
+            return ResponseEntity.badRequest().body("Invalid or missing value for field 'status'");
+        } else if (ex.getMessage().contains("TaskPriority")) {
+            return ResponseEntity.badRequest().body("Invalid or missing value for field 'priority'");
+        }
+        return ResponseEntity.badRequest().body("Invalid request body: " + ex.getMostSpecificCause().getMessage());
+    }
+
 
 }

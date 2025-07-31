@@ -18,6 +18,7 @@ import com.example.taskmanager.adapters.web.dto.LoginRequest;
 import com.example.taskmanager.adapters.web.dto.LoginResponse;
 import com.example.taskmanager.adapters.web.dto.UserRequest;
 import com.example.taskmanager.adapters.web.dto.UserUpdateRequest;
+import com.example.taskmanager.application.usecases.ActionLogService;
 import com.example.taskmanager.application.usecases.LoginUserUseCase;
 import com.example.taskmanager.application.usecases.RegisterUserUseCase;
 import com.example.taskmanager.domain.model.User;
@@ -30,11 +31,14 @@ public class UserController {
 
     private final RegisterUserUseCase registerUserUseCase;
     private final LoginUserUseCase loginUserUseCase;
+    private final ActionLogService actionLogService;
 
     public UserController(RegisterUserUseCase registerUserUseCase,
-                          LoginUserUseCase loginUserUseCase) {
+                          LoginUserUseCase loginUserUseCase,
+                          ActionLogService actionLogService) {
         this.registerUserUseCase = registerUserUseCase;
         this.loginUserUseCase = loginUserUseCase;
+        this.actionLogService = actionLogService;
     }
 
     @PostMapping("/auth/register")
@@ -43,7 +47,6 @@ public class UserController {
         User registeredUser = registerUserUseCase.register(user);
         return ResponseEntity.status(HttpStatus.CREATED).body(registeredUser);
     }
-
 
     @PostMapping("/auth/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
@@ -91,12 +94,15 @@ public class UserController {
         User existingUser = existingUserOpt.get();
         existingUser.setUsername(request.getUsername());
         existingUser.setEmail(request.getEmail());
-        existingUser.setPassword(request.getPassword()); // dilersen burada hash işlemi de yapılabilir
+        existingUser.setPassword(request.getPassword());
 
         User savedUser = registerUserUseCase.updateUser(existingUser);
+
+        // ✅ Log the update action
+        actionLogService.log(userIdFromToken, "UPDATE", "User", savedUser.getId());
+
         return ResponseEntity.ok(savedUser);
     }
-
 
     @DeleteMapping("/users/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id, Authentication authentication) {
@@ -113,6 +119,10 @@ public class UserController {
         }
 
         registerUserUseCase.deleteUser(id);
-        return ResponseEntity.noContent().build(); 
+
+        // ✅ Log the delete action
+        actionLogService.log(userIdFromToken, "DELETE", "User", id);
+
+        return ResponseEntity.noContent().build();
     }
 }
