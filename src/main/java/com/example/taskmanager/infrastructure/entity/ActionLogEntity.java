@@ -29,13 +29,14 @@ public class ActionLogEntity {
 
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
     public String getAction() { return action; }
-    public void setAction(String action) { this.action = action; }
     public String getResource() { return resource; }
-    public void setResource(String resource) { this.resource = resource; }
     public Long getResourceId() { return resourceId; }
-    public void setResourceId(Long resourceId) { this.resourceId = resourceId; }
     public LocalDateTime getTimestamp() { return timestamp; }
+
+    public void setUserId(Long userId) { this.userId = userId; }
+    public void setAction(String action) { this.action = action; }
+    public void setResource(String resource) { this.resource = resource; }
+    public void setResourceId(Long resourceId) { this.resourceId = resourceId; }
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
 }

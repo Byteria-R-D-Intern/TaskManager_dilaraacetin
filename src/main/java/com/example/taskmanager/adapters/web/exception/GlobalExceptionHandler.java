@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.security.access.AccessDeniedException;
 
 import com.example.taskmanager.domain.exception.ConflictException;
 
@@ -44,6 +45,11 @@ public class GlobalExceptionHandler {
             return ResponseEntity.badRequest().body("Invalid or missing value for field 'priority'");
         }
         return ResponseEntity.badRequest().body("Invalid request body: " + ex.getMostSpecificCause().getMessage());
+    }
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<String> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body("Access denied: " + ex.getMessage());
     }
 
 

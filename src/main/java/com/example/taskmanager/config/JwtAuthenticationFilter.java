@@ -1,10 +1,11 @@
 package com.example.taskmanager.config;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -31,10 +32,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             try {
                 String token = authHeader.substring(7);
-                Long userId = jwtUtil.extractUserId(token); 
+                Long userId = jwtUtil.extractUserId(token);
+                String role = jwtUtil.extractUserRole(token);
+
+                List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(role));
 
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
+                        new UsernamePasswordAuthenticationToken(userId, null, authorities);
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (Exception e) {

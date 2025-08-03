@@ -32,6 +32,7 @@ public class LoginUserUseCase {
             throw new IllegalArgumentException("Invalid credentials");
         }
 
-        return jwtUtil.generateToken(user.getId());
+        return jwtUtil.generateToken(user.getId(), user.getRole());
     }
+
 }

@@ -16,4 +16,8 @@ public class GetTasksByUserUseCase {
     public List<Task> getTasksForUser(Long userId) {
         return taskRepository.findAllByUserId(userId);
     }
+
+    public List<Task> getAllTasks() {
+        return taskRepository.findAll();
+    }
 }

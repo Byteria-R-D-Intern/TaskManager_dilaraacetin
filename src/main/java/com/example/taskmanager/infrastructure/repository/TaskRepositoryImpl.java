@@ -1,14 +1,15 @@
 package com.example.taskmanager.infrastructure.repository;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Repository;
+
 import com.example.taskmanager.domain.model.Task;
 import com.example.taskmanager.domain.ports.TaskRepository;
 import com.example.taskmanager.infrastructure.entity.TaskEntity;
 import com.example.taskmanager.infrastructure.mapper.TaskMapper;
-import org.springframework.stereotype.Repository;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Repository
 public class TaskRepositoryImpl implements TaskRepository {
@@ -36,6 +37,14 @@ public class TaskRepositoryImpl implements TaskRepository {
     @Override
     public List<Task> findAllByUserId(Long userId) {
         return jpaTaskRepository.findAllByUserId(userId)
+                .stream()
+                .map(taskMapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Task> findAll() {
+        return jpaTaskRepository.findAll()
                 .stream()
                 .map(taskMapper::toDomain)
                 .collect(Collectors.toList());

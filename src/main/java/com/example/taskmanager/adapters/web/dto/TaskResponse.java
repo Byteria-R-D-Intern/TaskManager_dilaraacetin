@@ -1,9 +1,9 @@
 package com.example.taskmanager.adapters.web.dto;
 
-import java.time.LocalDate;
-
 import com.example.taskmanager.domain.model.TaskPriority;
 import com.example.taskmanager.domain.model.TaskStatus;
+
+import java.time.LocalDate;
 
 public class TaskResponse {
 
@@ -12,17 +12,20 @@ public class TaskResponse {
     private String description;
     private TaskStatus status;
     private TaskPriority priority;
-    @SuppressWarnings("FieldMayBeFinal")
     private LocalDate dueDate;
+    private Long userId;
+    private String username; // Yeni alan
 
     public TaskResponse(Long id, String title, String description, TaskStatus status,
-                        TaskPriority priority, LocalDate dueDate) {
+                        TaskPriority priority, LocalDate dueDate, Long userId, String username) {
         this.id = id;
         this.title = title;
         this.description = description;
         this.status = status;
         this.priority = priority;
         this.dueDate = dueDate;
+        this.userId = userId;
+        this.username = username;
     }
 
     public Long getId() { return id; }
@@ -31,4 +34,6 @@ public class TaskResponse {
     public TaskStatus getStatus() { return status; }
     public TaskPriority getPriority() { return priority; }
     public LocalDate getDueDate() { return dueDate; }
+    public Long getUserId() { return userId; }
+    public String getUsername() { return username; }
 }
