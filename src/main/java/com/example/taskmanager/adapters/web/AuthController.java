@@ -1,5 +1,12 @@
 package com.example.taskmanager.adapters.web;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.taskmanager.adapters.web.dto.LoginRequest;
 import com.example.taskmanager.adapters.web.dto.LoginResponse;
 import com.example.taskmanager.adapters.web.dto.UserRequest;
@@ -8,9 +15,6 @@ import com.example.taskmanager.application.usecases.RegisterUserUseCase;
 import com.example.taskmanager.domain.model.User;
 
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -32,7 +36,7 @@ public class AuthController {
             userRequest.getUsername(),
             userRequest.getEmail(),
             userRequest.getPassword(),
-            userRequest.getRole() 
+            "ROLE_USER"
         );
         User registeredUser = registerUserUseCase.register(user);
         return ResponseEntity.status(HttpStatus.CREATED).body(registeredUser);

@@ -39,5 +39,18 @@ public class RegisterUserUseCase {
     public void deleteUser(Long id) {
         userRepository.deleteById(id);
     }
+    public User updateUserRole(Long userId, String newRole) {
+    Optional<User> userOpt = userRepository.findById(userId);
+
+    if (userOpt.isEmpty()) {
+        throw new IllegalArgumentException("User not found");
+    }
+
+    User user = userOpt.get();
+    user.setRole(newRole);
+
+    return userRepository.save(user);
+}
+
 
 }
