@@ -1,16 +1,23 @@
 package com.example.taskmanager.adapters.web;
 
-import com.example.taskmanager.adapters.web.dto.ActionLogResponse;
-import com.example.taskmanager.application.usecases.ActionLogService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.taskmanager.adapters.web.dto.ActionLogResponse;
+import com.example.taskmanager.application.usecases.ActionLogService;
+
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api/logs")
-@PreAuthorize("hasRole('ROLE_ADMIN')") // sadece ADMIN kullanıcılar erişebilir
+@PreAuthorize("hasRole('ROLE_ADMIN')")
 public class ActionLogController {
 
     private final ActionLogService logService;

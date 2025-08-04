@@ -1,10 +1,10 @@
 # 🗂️ TaskManager API
 
-A personal task management REST API built with **Spring Boot**, **MySQL**, **JWT authentication**, and **Clean Architecture** principles.
+A personal task management REST API built with **Spring Boot**, **MySQL**, **JWT authentication**, **Swagger UI**, and **Clean Architecture** principles.
 
 ---
 
-## 🛠️ Installation & Run
+## Installation & Run
 
 ### 1. Clone the repository
 
@@ -38,20 +38,48 @@ jwt.secret=your_secret_key
 jwt.expiration=3600000
 ```
 
-### 4. Build and run the project
+Alternatively, you can use a `.env` file:
+
+```env
+JWT_SECRET=your_secret_key
+JWT_EXPIRATION=3600000
+```
+
+---
+
+## Run the Project
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-App will be running at:
+The app will run at:
+
 ```
 http://localhost:8080
 ```
 
 ---
 
-## 🔐 Authentication
+## API Documentation (Swagger UI)
+
+After starting the application, visit:
+
+```
+http://localhost:8080/swagger-ui/index.html
+```
+
+To test secured endpoints:
+
+1. Click the **Authorize** button in the top-right corner.
+2. Enter your token as:
+   ```
+   Bearer YOUR_JWT_TOKEN
+   ```
+
+---
+
+## Authentication
 
 ### Register
 
@@ -61,7 +89,8 @@ http://localhost:8080
 {
   "username": "dilara",
   "email": "dilara@example.com",
-  "password": "123456"
+  "password": "123456",
+  "role": "ROLE_USER"
 }
 ```
 
@@ -86,21 +115,21 @@ http://localhost:8080
 
 ---
 
-## 👤 User Endpoints (Requires JWT Token)
+## User Endpoints (Requires JWT Token)
 
 > Add this header to all user and task requests:
-> 
+>
 > ```
 > Authorization: Bearer YOUR_JWT_TOKEN
 > ```
 
 ### Get user by ID
 
-`GET /api/users/{id}`
+`GET /api/users`
 
 ### Update user
 
-`PUT /api/users/{id}`
+`PUT /api/users`
 
 ```json
 {
@@ -110,13 +139,13 @@ http://localhost:8080
 }
 ```
 
-### Delete user
+### Delete user (Admin only)
 
 `DELETE /api/users/{id}`
 
 ---
 
-## 📋 Task Endpoints (Requires JWT Token)
+## Task Endpoints (Requires JWT Token)
 
 ### Create Task
 
@@ -131,21 +160,21 @@ http://localhost:8080
   "dueDate": "2025-08-01"
 }
 ```
----
 
 ### Get Tasks for Current User
 
 `GET /api/tasks`
 
----
+### Get Tasks for All Users (Admin and Manager Only)
+
+`GET /api/tasks/all`
 
 ### Update Task
 
-`PUT /api/tasks`
+`PUT /api/tasks/{id}`
 
 ```json
 {
-  "id": 3,
   "title": "Study Updated",
   "description": "Read updated docs",
   "status": "IN_PROGRESS",
@@ -153,15 +182,23 @@ http://localhost:8080
   "dueDate": "2025-08-05"
 }
 ```
----
 
 ### Delete Task
 
-`DELETE /api/tasks`
+`DELETE /api/tasks/{id}`
 
-```json
-{
-  "id": 3
-}
-```
----
+## Action Logs (Admin Only)
+
+Requires JWT with role ROLE_ADMIN
+
+### Get all logs
+
+`GET /api/logs`
+
+Returns all user action logs (create, update, delete operations).
+
+### Get logs for a specific user
+
+`GET /api/logs/{id}`
+
+Returns the action logs associated with a specific user.

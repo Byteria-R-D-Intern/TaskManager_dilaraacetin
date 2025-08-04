@@ -1,9 +1,9 @@
 package com.example.taskmanager.adapters.web.dto;
 
+import java.time.LocalDate;
+
 import com.example.taskmanager.domain.model.TaskPriority;
 import com.example.taskmanager.domain.model.TaskStatus;
-
-import java.time.LocalDate;
 
 public class TaskResponse {
 
@@ -14,7 +14,7 @@ public class TaskResponse {
     private TaskPriority priority;
     private LocalDate dueDate;
     private Long userId;
-    private String username; // Yeni alan
+    private String username;
 
     public TaskResponse(Long id, String title, String description, TaskStatus status,
                         TaskPriority priority, LocalDate dueDate, Long userId, String username) {

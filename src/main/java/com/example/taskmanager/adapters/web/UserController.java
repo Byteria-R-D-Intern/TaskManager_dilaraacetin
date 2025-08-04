@@ -20,8 +20,10 @@ import com.example.taskmanager.application.usecases.ActionLogService;
 import com.example.taskmanager.application.usecases.RegisterUserUseCase;
 import com.example.taskmanager.domain.model.User;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -65,21 +67,6 @@ public class UserController {
         return ResponseEntity.ok(savedUser);
     }
 
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    @DeleteMapping
-    public ResponseEntity<?> deleteUser(Authentication authentication) {
-        Long userId = (Long) authentication.getPrincipal();
-
-        Optional<User> userOpt = registerUserUseCase.getUserById(userId);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
-        }
-
-        registerUserUseCase.deleteUser(userId);
-        actionLogService.log(userId, "DELETE", "User", userId);
-
-        return ResponseEntity.noContent().build();
-    }
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUserById(@PathVariable Long id) {
