@@ -9,6 +9,6 @@ public interface TaskRepository {
     Task save(Task task);
     Optional<Task> findById(Long id);
     List<Task> findAllByUserId(Long userId);
-    List<Task> findAll(); // <-- eklendi
+    List<Task> findAll(); 
     void deleteById(Long id);
 }

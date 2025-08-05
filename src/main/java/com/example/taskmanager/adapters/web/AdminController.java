@@ -42,8 +42,6 @@ public class AdminController {
         }
 
         User updated = registerUserUseCase.updateUserRole(id, request.getRole());
-
-        // Log işlemi (isteğe bağlı)
         Long adminId = (Long) authentication.getPrincipal();
         actionLogService.log(adminId, "UPDATE_ROLE", "User", id);
 
