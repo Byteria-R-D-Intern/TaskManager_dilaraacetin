@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Tasks</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <h1>My Tasks</h1>
+  <button onclick="logout()">Logout</button>
+
+  <h2>Create New Task</h2>
+  <form id="task-form">
+    <input type="text" id="title" placeholder="Title" required><br>
+    <input type="text" id="description" placeholder="Description" required><br>
+    <select id="status">
+      <option value="TODO">To Do</option>
+      <option value="IN_PROGRESS">In Progress</option>
+      <option value="DONE">Done</option>
+    </select><br>
+    <select id="priority">
+      <option value="LOW">Low</option>
+      <option value="MEDIUM">Medium</option>
+      <option value="HIGH">High</option>
+    </select><br>
+    <input type="date" id="dueDate"><br>
+    <button type="submit">Add Task</button>
+  </form>
+
+  <h2>Task List</h2>
+  <ul id="task-list"></ul>
+
+  <script src="js/tasks.js"></script>
+</body>
+</html>
