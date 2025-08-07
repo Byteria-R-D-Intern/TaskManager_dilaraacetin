@@ -6,12 +6,14 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.security.access.AccessDeniedException;
 
 import com.example.taskmanager.domain.exception.ConflictException;
+import com.example.taskmanager.domain.exception.ForbiddenException;
+import com.example.taskmanager.domain.exception.NotFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -51,6 +53,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                             .body("Access denied: " + ex.getMessage());
     }
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<Object> handleNotFound(NotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+    }
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<String> handleForbidden(ForbiddenException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
+    }
+
 
 
 }
