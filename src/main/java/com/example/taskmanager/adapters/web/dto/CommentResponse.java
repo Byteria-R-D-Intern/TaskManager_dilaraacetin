@@ -6,14 +6,16 @@ public class CommentResponse {
 
     private Long id;
     private Long userId;
+    private String username;
     private String content;
     private LocalDateTime timestamp;
 
     public CommentResponse() {}
 
-    public CommentResponse(Long id, Long userId, String content, LocalDateTime timestamp) {
+    public CommentResponse(Long id, Long userId, String username, String content, LocalDateTime timestamp) {
         this.id = id;
         this.userId = userId;
+        this.username = username;
         this.content = content;
         this.timestamp = timestamp;
     }
@@ -32,5 +34,9 @@ public class CommentResponse {
 
     public LocalDateTime getTimestamp() {
         return timestamp;
+    }
+
+     public String getUsername() { 
+        return username; 
     }
 }

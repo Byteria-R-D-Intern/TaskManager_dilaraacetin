@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Task Manager – My Tasks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{ --border:#e6e9f2; --text:#0f172a; --muted:#5b6474; --primary:#4f7cff; --bg:#fafbfe; }
+    *{ box-sizing:border-box; } body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; color:var(--text); background:var(--bg); }
+    header{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; background:#fff; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:10; }
+    .brand{ font-weight:700; } .actions{ display:flex; gap:8px; }
+    .btn{ border:1px solid var(--border); background:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; }
+    main{ max-width:1200px; margin:20px auto; padding:0 16px 40px; }
+    .card{ background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px; }
+
+    /* Toolbar */
+    .toolbar{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:10px 0 12px; border-bottom:1px solid var(--border); margin-bottom:12px; }
+    .filters{ display:flex; gap:16px; flex-wrap:wrap; }
+    .chips{ display:flex; gap:8px; flex-wrap:wrap; }
+    .chip{ border:1px solid var(--border); background:#fff; padding:6px 10px; border-radius:999px; cursor:pointer; font-size:13px; }
+    .chip.active{ background:var(--primary); color:#fff; border-color:var(--primary); }
+    .search{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    #search-input{ padding:8px 10px; border:1px solid var(--border); border-radius:8px; min-width:220px; }
+    .dates{ display:flex; align-items:center; gap:6px; }
+    .dates input{ padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:#fff; }
+    .sep{ color:var(--muted); }
+    .sort select{ padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:#fff; }
+    #clear-filters{ border:1px solid var(--border); background:#fff; border-radius:8px; padding:8px 10px; cursor:pointer; }
+
+    /* Tablo */
+    .table-wrap{ overflow:auto; }
+    table{ width:100%; border-collapse:collapse; }
+    thead th{ position:sticky; top:0; background:#f5f7fd; text-align:left; font-weight:600; font-size:14px; border-bottom:1px solid var(--border); padding:10px; }
+    tbody td{ border-bottom:1px solid var(--border); padding:10px; vertical-align:top; font-size:14px; }
+    tbody tr:hover{ background:#fafcff; }
+    .col-id{ width:70px; }
+    .col-status,.col-prio,.col-due{ white-space:nowrap; }
+    .badge{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid var(--border); }
+    .badge.status-TODO{ background:#fff; }
+    .badge.status-IN_PROGRESS{ background:#fff7ed; border-color:#ffd7a8; }
+    .badge.status-DONE{ background:#ecfdf5; border-color:#a7f3d0; }
+    .badge.prio-LOW{ background:#eef2ff; border-color:#c7d2fe; }
+    .badge.prio-MEDIUM{ background:#fffbeb; border-color:#fde68a; }
+    .badge.prio-HIGH{ background:#fff1f2; border-color:#fecdd3; }
+    #summary{ margin:6px 0 0; color:var(--muted); font-size:13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">My Tasks</div>
+    <div class="actions">
+      <button class="btn" id="menu-btn">Menü</button>
+      <button class="btn" id="logout-btn">Çıkış</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="toolbar">
+        <div class="filters">
+          <div class="chips" id="chip-status">
+            <button data-status="" class="chip active">All</button>
+            <button data-status="TODO" class="chip">To Do</button>
+            <button data-status="IN_PROGRESS" class="chip">In Progress</button>
+            <button data-status="DONE" class="chip">Done</button>
+          </div>
+          <div class="chips" id="chip-priority">
+            <button data-priority="" class="chip active">All</button>
+            <button data-priority="LOW" class="chip">Low</button>
+            <button data-priority="MEDIUM" class="chip">Medium</button>
+            <button data-priority="HIGH" class="chip">High</button>
+          </div>
+        </div>
+
+        <div class="search">
+          <input id="search-input" type="text" placeholder="Search by title…" />
+          <div class="dates">
+            <input type="date" id="due-from" />
+            <span class="sep">–</span>
+            <input type="date" id="due-to" />
+          </div>
+          <div class="sort">
+            <select id="sort-by" title="Sırala">
+              <option value="dueAsc">Due date ↑</option>
+              <option value="dueDesc">Due date ↓</option>
+              <option value="priorityDesc">Priority High→Low</option>
+              <option value="priorityAsc">Priority Low→High</option>
+              <option value="titleAsc">Title A→Z</option>
+            </select>
+          </div>
+          <button id="clear-filters" type="button">Clear</button>
+        </div>
+      </div>
+
+      <div id="summary"></div>
+
+      <div class="table-wrap">
+        <table id="tasks-table" aria-describedby="summary">
+          <thead>
+            <tr>
+              <th class="col-id">ID</th>
+              <th>Title</th>
+              <th>Description</th>
+              <th class="col-status">Status</th>
+              <th class="col-prio">Priority</th>
+              <th class="col-due">Due Date</th>
+            </tr>
+          </thead>
+          <tbody id="task-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE = "http://localhost:8080/api";
+    const token = localStorage.getItem("jwtToken");
+    if (!token) { window.location.href = "auth.html"; }
+
+    document.getElementById("menu-btn").addEventListener("click", ()=>{ window.location.href = "menu.html"; });
+    document.getElementById("logout-btn").addEventListener("click", ()=>{ localStorage.removeItem("jwtToken"); window.location.href = "auth.html"; });
+
+    async function authFetch(url, options = {}) {
+      const headers = options.headers || {};
+      const res = await fetch(url, {
+        ...options,
+        headers: { ...headers, "Authorization": `Bearer ${token}`, ...(options.method && options.method !== "GET" ? { "Content-Type": "application/json" } : {}) }
+      });
+      if (res.status === 401 || res.status === 403) {
+        alert("Oturum süreniz doldu. Lütfen tekrar giriş yapın.");
+        localStorage.removeItem("jwtToken");
+        window.location.href = "auth.html";
+        throw new Error("Unauthorized");
+      }
+      return res;
+    }
+
+    const filters = { status:"", priority:"", title:"", dueFrom:"", dueTo:"", sortBy:"dueAsc" };
+    function debounce(fn, wait=300){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; }
+    function escapeHtml(s){ if(!s) return ""; return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+    const prRank = { HIGH:3, MEDIUM:2, LOW:1 };
+    let serverTasks = [];
+
+    function inDateRange(due, from, to){
+      if (!from && !to) return true;
+      if (!due) return false;
+      if (from && due < from) return false;
+      if (to && due > to) return false;
+      return true;
+    }
+    function sortTasks(arr, sortBy){
+      const a=[...arr];
+      if (sortBy==="dueAsc") a.sort((x,y)=>(x.dueDate||"9999-99-99").localeCompare(y.dueDate||"9999-99-99"));
+      else if (sortBy==="dueDesc") a.sort((x,y)=>(y.dueDate||"0000-00-00").localeCompare(x.dueDate||"0000-00-00"));
+      else if (sortBy==="priorityDesc") a.sort((x,y)=>(prRank[y.priority]||0)-(prRank[x.priority]||0));
+      else if (sortBy==="priorityAsc") a.sort((x,y)=>(prRank[x.priority]||0)-(prRank[y.priority]||0));
+      else if (sortBy==="titleAsc") a.sort((x,y)=>(x.title||"").localeCompare(y.title||""));
+      return a;
+    }
+
+    async function loadTasks(){
+      try{
+        const params = new URLSearchParams();
+        if (filters.status) params.append("status", filters.status);
+        if (filters.priority) params.append("priority", filters.priority);
+        if (filters.title) params.append("title", filters.title);
+
+        // /api/tasks -> sadece kullanıcının görevleri
+        const res = await authFetch(params.toString() ? `${API_BASE}/tasks?${params}` : `${API_BASE}/tasks`);
+        if (!res.ok) throw new Error(await res.text() || "Görevler yüklenemedi");
+        serverTasks = await res.json();
+
+        let list = serverTasks.filter(t => inDateRange(t.dueDate, filters.dueFrom, filters.dueTo));
+        list = sortTasks(list, filters.sortBy);
+        render(list);
+      }catch(e){ console.error(e); alert("Görevler alınırken hata oluştu."); }
+    }
+
+    function render(tasks){
+      const tbody = document.getElementById("task-tbody");
+      const summary = document.getElementById("summary");
+      tbody.innerHTML = "";
+      summary.textContent = `${tasks.length} task listelendi${(filters.status||filters.priority||filters.title||filters.dueFrom||filters.dueTo) ? " (filtre uygulandı)" : ""}.`;
+
+      if (!tasks.length){
+        tbody.innerHTML = `<tr><td colspan="6"><small class="muted">Sonuç bulunamadı.</small></td></tr>`;
+        return;
+      }
+      for (const t of tasks){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="col-id">${t.id ?? "-"}</td>
+          <td>${escapeHtml(t.title)}</td>
+          <td>${escapeHtml(t.description || "")}</td>
+          <td class="col-status"><span class="badge status-${t.status}">${t.status}</span></td>
+          <td class="col-prio"><span class="badge prio-${t.priority}">${t.priority}</span></td>
+          <td class="col-due">${t.dueDate || "-"}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    // Etkinlikler
+    document.getElementById("chip-status").addEventListener("click", (e)=>{
+      const btn = e.target.closest("button[data-status]"); if(!btn) return;
+      filters.status = btn.getAttribute("data-status") || "";
+      [...e.currentTarget.querySelectorAll(".chip")].forEach(c=>c.classList.remove("active"));
+      btn.classList.add("active"); loadTasks();
+    });
+    document.getElementById("chip-priority").addEventListener("click", (e)=>{
+      const btn = e.target.closest("button[data-priority]"); if(!btn) return;
+      filters.priority = btn.getAttribute("data-priority") || "";
+      [...e.currentTarget.querySelectorAll(".chip")].forEach(c=>c.classList.remove("active"));
+      btn.classList.add("active"); loadTasks();
+    });
+
+    const searchEl = document.getElementById("search-input");
+    searchEl.addEventListener("input", debounce(()=>{ filters.title = searchEl.value.trim(); loadTasks(); }, 350));
+    searchEl.addEventListener("keypress", (e)=>{ if (e.key === "Enter") e.preventDefault(); });
+
+    document.getElementById("due-from").addEventListener("change", e=>{ filters.dueFrom = e.target.value || ""; loadTasks(); });
+    document.getElementById("due-to").addEventListener("change", e=>{ filters.dueTo = e.target.value || ""; loadTasks(); });
+    document.getElementById("sort-by").addEventListener("change", e=>{ filters.sortBy = e.target.value; loadTasks(); });
+    document.getElementById("clear-filters").addEventListener("click", ()=>{
+      filters.status=""; filters.priority=""; filters.title=""; filters.dueFrom=""; filters.dueTo=""; filters.sortBy="dueAsc";
+      document.querySelectorAll("#chip-status .chip, #chip-priority .chip").forEach(c=>c.classList.remove("active"));
+      document.querySelector("#chip-status .chip")?.classList.add("active");
+      document.querySelector("#chip-priority .chip")?.classList.add("active");
+      searchEl.value=""; document.getElementById("due-from").value=""; document.getElementById("due-to").value=""; document.getElementById("sort-by").value="dueAsc";
+      loadTasks();
+    });
+
+    loadTasks();
+  </script>
+</body>
+</html>

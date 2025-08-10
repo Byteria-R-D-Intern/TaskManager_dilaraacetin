@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Task Manager – Menü</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/menu.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Task Manager</div>
+    <div class="userbox">
+      <span id="welcome">Hoş geldin</span>
+      <span id="role-badge" class="badge">ROLE_USER</span>
+      <button class="btn-out" id="logout-btn">Çıkış</button>
+    </div>
+  </header>
+
+  <main class="center">
+    <ul id="main-menu">
+      <li><a href="#" data-text="Home" id="link-home">Home</a></li>
+      <li><a href="#" data-text="My Tasks" id="link-tasks">My Tasks</a></li>
+      <li><a href="#" data-text="Create Task" id="link-create">Create</a></li>
+      <li class="role-mm"><a href="#" data-text="All Tasks" id="link-all">All Tasks</a></li>
+      <li><a href="#" data-text="My Stats" id="link-stats">My Stats</a></li>
+      <li class="role-admin"><a href="#" data-text="Logs" id="link-logs">Logs</a></li>
+      <li><a href="#" data-text="Profile" id="link-profile">Profile</a></li>
+      <li><a href="#" data-text="Contact" id="link-contact">Contact</a></li>
+    </ul>
+  </main>
+
+  <script src="js/menu.js"></script>
+</body>
+</html>

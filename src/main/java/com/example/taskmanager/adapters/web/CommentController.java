@@ -17,6 +17,8 @@ import com.example.taskmanager.adapters.web.dto.CommentRequest;
 import com.example.taskmanager.adapters.web.dto.CommentResponse;
 import com.example.taskmanager.application.usecases.CommentService;
 import com.example.taskmanager.domain.model.Comment;
+import com.example.taskmanager.domain.model.User;
+import com.example.taskmanager.domain.ports.UserRepository;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -27,9 +29,11 @@ import jakarta.validation.Valid;
 public class CommentController {
 
     private final CommentService commentService;
+    private final UserRepository userRepository; // <— eklendi
 
-    public CommentController(CommentService commentService) {
+    public CommentController(CommentService commentService, UserRepository userRepository) {
         this.commentService = commentService;
+        this.userRepository = userRepository;
     }
 
     @PostMapping
@@ -40,9 +44,14 @@ public class CommentController {
 
         Comment comment = commentService.addComment(taskId, userId, request.getContent());
 
+        String username = userRepository.findById(comment.getUserId())
+                .map(User::getUsername)
+                .orElse("Unknown");
+
         CommentResponse response = new CommentResponse(
             comment.getId(),
             comment.getUserId(),
+            username,                // <—
             comment.getContent(),
             comment.getTimestamp()
         );
@@ -58,6 +67,7 @@ public class CommentController {
             .map(c -> new CommentResponse(
                 c.getId(),
                 c.getUserId(),
+                userRepository.findById(c.getUserId()).map(User::getUsername).orElse("Unknown"), // <—
                 c.getContent(),
                 c.getTimestamp()
             ))
