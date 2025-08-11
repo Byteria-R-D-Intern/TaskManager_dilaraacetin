@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Task Manager – Users (Admin)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/tasks.css" />
+  <style>
+    .table-wrap{ overflow:auto; }
+    table{ width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+    thead th{ text-align:left; font-weight:600; font-size:14px; padding:12px; background:#f6f8ff; border-bottom:1px solid var(--border); }
+    tbody td{ padding:12px; border-bottom:1px solid var(--border); font-size:14px; }
+    tbody tr:hover{ background:#fafcff; }
+    .col-id{ width:88px; }
+    .col-actions{ width:230px; white-space:nowrap; text-align:right; }
+    select.role-select{ padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff; }
+    .hint{ color:var(--muted); font-size:12px; }
+  </style>
+</head>
+<body>
+  <header class="appbar">
+    <div class="brand">Users (Admin)</div>
+    <div class="actions">
+      <button class="btn" id="menu-btn">Menü</button>
+      <button class="btn" id="logs-btn">Logs</button>
+      <button class="btn" id="refresh-users">Yenile</button>
+      <button class="btn" id="logout-btn">Çıkış</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="toolbar">
+        <div class="filters">
+          <div class="filter-group">
+            <button class="btn primary" id="try-fetch-all">Tüm Kullanıcıları Getir</button>
+          </div>
+
+          <div class="filter-group">
+            <span class="group-title">Arama / Filtre</span>
+            <input type="text" id="search" class="input" placeholder="Ara: id / username / email" />
+            <select id="role-filter">
+              <option value="">Role: All</option>
+              <option value="ROLE_USER">ROLE_USER</option>
+              <option value="ROLE_MANAGER">ROLE_MANAGER</option>
+              <option value="ROLE_ADMIN">ROLE_ADMIN</option>
+            </select>
+            <button class="btn" id="clear-filters">Temizle</button>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <span class="group-title">Yönetim</span>
+          <input type="number" id="add-id" class="input" placeholder="Kullanıcı ID ekle" min="1" style="max-width:180px;" />
+          <button class="btn" id="add-id-btn">Ekle</button>
+          <span class="hint">Detay: <code>/api/admin/users/{id}</code> (yoksa <code>/api/users/{id}</code>)</span>
+        </div>
+      </div>
+
+      <div id="updated" class="hint" style="margin:6px 0 12px;"></div>
+
+      <div class="table-wrap">
+        <table id="users-table">
+          <thead>
+            <tr>
+              <th class="col-id">ID</th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px;">
+      <div class="filter-group" style="margin-bottom:12px;">
+        <span class="group-title">Kullanıcı Sil (ID)</span>
+        <input type="number" id="delUserId" class="input" placeholder="Örn: 7" min="1" style="max-width:180px;" />
+        <button class="btn danger" id="delete-user-btn">Kullanıcıyı Sil</button>
+        <span class="hint">Silme kalıcıdır.</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE = "http://localhost:8080/api";
+    const token = localStorage.getItem("jwtToken");
+    if (!token) { location.href = "auth.html"; }
+
+    const role = getRoleFromJWT(token);
+    if (role !== "ROLE_ADMIN") {
+      alert("Bu sayfaya erişim yetkiniz yok.");
+      location.href = "menu.html";
+    }
+
+    document.getElementById("menu-btn").addEventListener("click", ()=>location.href="menu.html");
+    document.getElementById("logs-btn").addEventListener("click", ()=>location.href="logs.html");
+    document.getElementById("logout-btn").addEventListener("click", ()=>{ localStorage.removeItem("jwtToken"); location.href="auth.html"; });
+    document.getElementById("refresh-users").addEventListener("click", tryFetchAllUsers);
+
+    function getRoleFromJWT(t){ try{ const p=t.split(".")[1]; return JSON.parse(atob(p.replace(/-/g,"+").replace(/_/g,"/"))).role; }catch(_){ return null; } }
+    async function authFetch(url, options = {}) {
+      const headers = options.headers || {};
+      const res = await fetch(url, {
+        ...options,
+        headers: { ...headers, "Authorization": `Bearer ${token}`, ...(options.method && options.method !== "GET" ? { "Content-Type":"application/json" } : {}) }
+      });
+      if (res.status === 401 || res.status === 403) {
+        alert("Oturum süresi doldu / yetki yok."); localStorage.removeItem("jwtToken"); location.href="auth.html"; throw new Error("Unauthorized");
+      }
+      return res;
+    }
+    function escapeHtml(s){ if(!s) return ""; return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+    function debounce(fn, wait=300){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; }
+    function markUpdated(){ document.getElementById("updated").textContent = "Güncellendi: " + new Date().toLocaleString(); }
+
+    let users = [];
+    const VALID_ROLES = ["ROLE_USER","ROLE_MANAGER","ROLE_ADMIN"];
+
+    function render(){
+      const term = document.getElementById("search").value.trim().toLowerCase();
+      const rf = document.getElementById("role-filter").value;
+      const tbody = document.getElementById("users-tbody");
+      tbody.innerHTML = "";
+
+      let list = users.filter(u=>{
+        if (rf && u.role !== rf) return false;
+        if (!term) return true;
+        const hay = `${u.id||""} ${u.username||""} ${u.email||""}`.toLowerCase();
+        return hay.includes(term);
+      });
+
+      if (!list.length){
+        tbody.innerHTML = `<tr><td colspan="5"><span class="hint">Kayıt yok.</span></td></tr>`;
+        return;
+      }
+
+      for (const u of list){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${u.id ?? "-"}</td>
+          <td>${escapeHtml(u.username || "—")}</td>
+          <td>${escapeHtml(u.email || "—")}</td>
+          <td>
+            <select class="role-select" data-id="${u.id}">
+              ${VALID_ROLES.map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r}</option>`).join("")}
+            </select>
+          </td>
+          <td class="col-actions">
+            <button class="btn btn-update" data-id="${u.id}">Rolü Güncelle</button>
+            <button class="btn danger btn-delete" data-id="${u.id}">Sil</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    async function tryFetchAllUsers(){
+      try{
+        const res = await authFetch(`${API_BASE}/admin/users`);
+        if (!res.ok) throw new Error(await res.text() || "Liste alınamadı");
+        users = await res.json();
+        render(); markUpdated();
+      }catch(e){ alert("Tüm kullanıcılar getirilemedi: " + (e.message||e)); }
+    }
+
+    async function maybeFetchUserDetail(id){
+      try{
+        const resA = await authFetch(`${API_BASE}/admin/users/${encodeURIComponent(id)}`);
+        if (resA.ok) return await resA.json();
+      }catch(_){}
+      try{
+        const res = await authFetch(`${API_BASE}/users/${encodeURIComponent(id)}`);
+        if (!res.ok) throw new Error("nope");
+        const u = await res.json();
+        return { id: u.id ?? id, username: u.username ?? null, email: u.email ?? null, role: u.role ?? null };
+      }catch{ return { id, username: null, email: null, role: null }; }
+    }
+
+    async function updateRole(id, newRole){
+      if (!VALID_ROLES.includes(newRole)) { alert("Geçersiz rol."); return; }
+      try{
+        const res = await authFetch(`${API_BASE}/admin/users/${encodeURIComponent(id)}/role`, { method:"PUT", body: JSON.stringify({ role:newRole }) });
+        if (!res.ok) throw new Error(await res.text() || "Rol güncellenemedi");
+        alert(`#${id} rol → ${newRole}`);
+        const u = users.find(x=>x.id==id); if (u) u.role=newRole; render();
+      }catch(e){ alert("Hata: " + (e.message || "Rol güncelleme")); }
+    }
+
+    async function deleteUser(id){
+      if (!confirm(`#${id} silinsin mi?`)) return;
+      try{
+        const res = await authFetch(`${API_BASE}/users/${encodeURIComponent(id)}`, { method:"DELETE" });
+        if (res.status === 204){ users = users.filter(u=>u.id!=id); render(); }
+        else { throw new Error(await res.text() || "Silinemedi"); }
+      }catch(e){ alert("Hata: " + (e.message || "Silme")); }
+    }
+
+    document.getElementById("try-fetch-all").addEventListener("click", tryFetchAllUsers);
+    document.getElementById("add-id-btn").addEventListener("click", async ()=>{
+      const el = document.getElementById("add-id");
+      const id = el.value.trim(); if (!id) return;
+      if (users.some(u=>String(u.id)===id)){ alert("Bu ID listede var."); return; }
+      users.push(await maybeFetchUserDetail(id)); el.value=""; render();
+    });
+    document.getElementById("delete-user-btn").addEventListener("click", async ()=>{
+      const id = document.getElementById("delUserId").value.trim(); if (!id) return;
+      await deleteUser(id); document.getElementById("delUserId").value="";
+    });
+
+    document.getElementById("search").addEventListener("input", debounce(render, 200));
+    document.getElementById("role-filter").addEventListener("change", render);
+    document.getElementById("clear-filters").addEventListener("click", ()=>{ document.getElementById("search").value=""; document.getElementById("role-filter").value=""; render(); });
+
+    document.getElementById("users-tbody").addEventListener("click", async (e)=>{
+      const upd = e.target.closest(".btn-update");
+      const del = e.target.closest(".btn-delete");
+      if (upd){
+        const id = upd.dataset.id;
+        const sel = document.querySelector(`.role-select[data-id="${CSS.escape(id)}"]`);
+        await updateRole(id, sel?.value);
+      } else if (del){
+        await deleteUser(e.target.dataset.id);
+      }
+    });
+    tryFetchAllUsers();
+  </script>
+</body>
+</html>

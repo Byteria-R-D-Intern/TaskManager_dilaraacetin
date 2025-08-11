@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Task Manager – Create Task</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/tasks.css" />
+</head>
+<body>
+  <header class="appbar">
+    <div class="brand">Create Task</div>
+    <div class="actions">
+      <button class="btn" id="back-btn">My Tasks</button>
+      <button class="btn" id="logout-btn">Çıkış</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <form id="task-form" class="form-grid">
+        <input type="text" id="title" class="input" placeholder="Başlık" required />
+        <textarea id="description" class="input" rows="4" placeholder="Açıklama" required></textarea>
+        <div class="form-grid two">
+          <select id="status">
+            <option value="TODO">To Do</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="DONE">Done</option>
+          </select>
+          <select id="priority">
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+          </select>
+        </div>
+        <input type="date" id="dueDate" class="input" />
+        <div class="actions">
+          <button class="btn primary" type="submit">Oluştur</button>
+          <span id="msg" class="small muted"></span>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE = "http://localhost:8080/api";
+    const token = localStorage.getItem("jwtToken");
+    if (!token) { window.location.href = "auth.html"; }
+
+    document.getElementById("back-btn").addEventListener("click", ()=> location.href="my-tasks.html");
+    document.getElementById("logout-btn").addEventListener("click", ()=>{ localStorage.removeItem("jwtToken"); location.href="auth.html"; });
+
+    async function authFetch(url, options = {}) {
+      const headers = options.headers || {};
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          ...headers,
+          "Authorization": `Bearer ${token}`,
+          ...(options.method && options.method !== "GET" ? { "Content-Type": "application/json" } : {})
+        }
+      });
+      if (res.status === 401 || res.status === 403) {
+        alert("Oturum süreniz doldu. Lütfen tekrar giriş yapın.");
+        localStorage.removeItem("jwtToken");
+        window.location.href = "auth.html";
+        throw new Error("Unauthorized");
+      }
+      return res;
+    }
+
+    document.getElementById("task-form").addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const title = document.getElementById("title").value.trim();
+      const description = document.getElementById("description").value.trim();
+      const status = document.getElementById("status").value;
+      const priority = document.getElementById("priority").value;
+      const dueDateRaw = document.getElementById("dueDate").value;
+      const payload = { title, description, status, priority };
+      if (dueDateRaw) payload.dueDate = dueDateRaw;
+
+      const msg = document.getElementById("msg"); msg.textContent = "";
+      try{
+        const res = await authFetch(`${API_BASE}/tasks`, { method:"POST", body: JSON.stringify(payload) });
+        if (!res.ok) throw new Error(await res.text() || "Görev oluşturulamadı");
+        msg.textContent = "Görev oluşturuldu!";
+        (e.target).reset();
+      }catch(err){ msg.textContent = "Hata: " + (err.message || "oluşturma başarısız"); }
+    });
+  </script>
+</body>
+</html>

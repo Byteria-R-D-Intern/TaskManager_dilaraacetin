@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Task Manager – Stats</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/tasks.css" />
+  <style>
+    .stats-grid{ display:grid; gap:16px; grid-template-columns:1fr; }
+    @media (min-width: 900px){ .stats-grid{ grid-template-columns: 1fr 1fr; } }
+    .kpi{ display:flex; align-items:center; gap:12px; padding:12px; border:1px dashed var(--border); border-radius:14px; background:#fff; }
+    .kpi .num{ font-weight:800; font-size:24px; }
+    .kpi .label{ color:var(--muted); font-size:12px; }
+    .bar{ height:10px; width:100%; background:#f1f4ff; border-radius:999px; overflow:hidden; }
+    .bar > span{ display:block; height:100%; border-radius:999px; }
+    .bar.todo > span{ background:#c7d2fe; }
+    .bar.inp  > span{ background:#fde68a; }
+    .bar.done > span{ background:#86efac; }
+    .section-title{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .section-title .group-title{ margin:0; }
+  </style>
+</head>
+<body>
+  <header class="appbar">
+    <div class="brand">Stats</div>
+    <div class="actions">
+      <button class="btn" id="menu-btn">Menü</button>
+      <button class="btn" id="refresh-btn">Yenile</button>
+      <button class="btn" id="logout-btn">Çıkış</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="stats-grid">
+      <section class="card">
+        <div class="section-title">
+          <span class="group-title">My Stats</span>
+          <span id="updated-me" class="small muted"></span>
+        </div>
+        <div id="me-kpis" class="grid"></div>
+      </section>
+
+      <section class="card" id="all-card" style="display:none;">
+        <div class="section-title">
+          <span class="group-title">All Users</span>
+          <span id="updated-all" class="small muted"></span>
+        </div>
+        <div id="all-kpis" class="grid"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = "http://localhost:8080/api";
+    const token = localStorage.getItem("jwtToken");
+    if (!token) { location.href = "auth.html"; }
+
+    const role = (function(){ try{ const p=token.split(".")[1]; return JSON.parse(atob(p.replace(/-/g,"+").replace(/_/g,"/"))).role; }catch(_){ return null; } })();
+
+    document.getElementById("menu-btn").addEventListener("click", ()=>location.href="menu.html");
+    document.getElementById("logout-btn").addEventListener("click", ()=>{ localStorage.removeItem("jwtToken"); location.href="auth.html"; });
+    document.getElementById("refresh-btn").addEventListener("click", loadStats);
+
+    async function authFetch(url, options = {}) {
+      const headers = options.headers || {};
+      const res = await fetch(url, {
+        ...options,
+        headers: { ...headers, "Authorization": `Bearer ${token}`, ...(options.method && options.method !== "GET" ? { "Content-Type":"application/json" } : {}) }
+      });
+      if (res.status === 401 || res.status === 403) {
+        alert("Oturum süresi doldu / yetki yok."); localStorage.removeItem("jwtToken"); location.href="auth.html"; throw new Error("Unauthorized");
+      }
+      return res;
+    }
+
+    function renderStats(el, data){
+      const { total=0, todo=0, inProgress=0, done=0 } = data || {};
+      const p = (n)=> total ? Math.round((n*100)/total) : 0;
+
+      el.innerHTML = `
+        <div class="kpi"><div class="num">${total}</div><div class="label">Toplam</div></div>
+        <div class="kpi" style="flex-direction:column; align-items:stretch;">
+          <div style="display:flex; justify-content:space-between; gap:8px;">
+            <span class="label">To Do</span><span class="small muted">${todo} (${p(todo)}%)</span>
+          </div>
+          <div class="bar todo"><span style="width:${p(todo)}%"></span></div>
+        </div>
+        <div class="kpi" style="flex-direction:column; align-items:stretch;">
+          <div style="display:flex; justify-content:space-between; gap:8px;">
+            <span class="label">In Progress</span><span class="small muted">${inProgress} (${p(inProgress)}%)</span>
+          </div>
+          <div class="bar inp"><span style="width:${p(inProgress)}%"></span></div>
+        </div>
+        <div class="kpi" style="flex-direction:column; align-items:stretch;">
+          <div style="display:flex; justify-content:space-between; gap:8px;">
+            <span class="label">Done</span><span class="small muted">${done} (${p(done)}%)</span>
+          </div>
+          <div class="bar done"><span style="width:${p(done)}%"></span></div>
+        </div>
+      `;
+    }
+
+    async function loadStats(){
+      try{
+        const resMe = await authFetch(`${API_BASE}/stats/tasks`);
+        if (!resMe.ok) throw new Error(await resMe.text() || "My stats alınamadı");
+        const me = await resMe.json();
+        renderStats(document.getElementById("me-kpis"), me);
+        document.getElementById("updated-me").textContent = new Date().toLocaleString();
+
+        if (role === "ROLE_MANAGER" || role === "ROLE_ADMIN"){
+          document.getElementById("all-card").style.display = "";
+          const resAll = await authFetch(`${API_BASE}/stats/tasks/all`);
+          if (resAll.ok){
+            const all = await resAll.json();
+            renderStats(document.getElementById("all-kpis"), all);
+            document.getElementById("updated-all").textContent = new Date().toLocaleString();
+          }
+        }
+      }catch(e){
+        console.error(e); alert("İstatistikler alınırken hata oluştu.");
+      }
+    }
+
+    loadStats();
+  </script>
+</body>
+</html>

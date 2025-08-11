@@ -1,6 +1,8 @@
 package com.example.taskmanager.infrastructure.repository;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Repository;
 
@@ -40,5 +42,13 @@ public class UserRepositoryImpl implements UserRepository {
     @Override
     public void deleteById(Long id) {
         jpaUserRepository.deleteById(id);
+    }
+
+    @Override
+    public List<User> findAll() {
+        return jpaUserRepository.findAll()
+                .stream()
+                .map(UserMapper::toDomain)
+                .collect(Collectors.toList());
     }
 }

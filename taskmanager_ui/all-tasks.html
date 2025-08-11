@@ -2,13 +2,13 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <title>Task Manager – My Tasks</title>
+  <title>Task Manager – All Tasks</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="css/tasks.css" />
 </head>
 <body>
   <header class="appbar">
-    <div class="brand">My Tasks</div>
+    <div class="brand">All Tasks</div>
     <div class="actions">
       <button class="btn" id="menu-btn">Menü</button>
       <button class="btn" id="refresh-btn">Yenile</button>
@@ -42,7 +42,8 @@
         </div>
 
         <div class="search">
-          <input id="search-input" class="input" type="text" placeholder="Başlığa göre ara…" />
+          <input id="search-input" class="input" type="text" placeholder="Başlıkta ara…" />
+          <input id="user-search" class="input" type="text" placeholder="Kullanıcıda ara (username)…" />
           <button id="clear-filters" class="btn">Temizle</button>
         </div>
       </div>
@@ -56,6 +57,14 @@
     const API_BASE = "http://localhost:8080/api";
     const token = localStorage.getItem("jwtToken");
     if (!token) { window.location.href = "auth.html"; }
+
+    const role = (function(){
+      try{ const p=token.split(".")[1]; return JSON.parse(atob(p.replace(/-/g,"+").replace(/_/g,"/"))).role; }catch(_){ return null; }
+    })();
+    if (!(role==="ROLE_MANAGER" || role==="ROLE_ADMIN")){
+      alert("Bu sayfa için yetkiniz yok.");
+      location.href="menu.html";
+    }
 
     document.getElementById("menu-btn").addEventListener("click", ()=> location.href="menu.html");
     document.getElementById("logout-btn").addEventListener("click", ()=>{ localStorage.removeItem("jwtToken"); location.href="auth.html"; });
@@ -72,7 +81,7 @@
         }
       });
       if (res.status === 401 || res.status === 403) {
-        alert("Oturum süreniz doldu. Lütfen tekrar giriş yapın.");
+        alert("Oturum süreniz doldu veya yetkiniz yok.");
         localStorage.removeItem("jwtToken");
         window.location.href = "auth.html";
         throw new Error("Unauthorized");
@@ -80,26 +89,25 @@
       return res;
     }
 
-    const filters = { status:"", priority:"", title:"" };
-
+    const filters = { status:"", priority:"", title:"", username:"" };
     function debounce(fn, wait=300){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; }
-    function escapeHtml(str){ if(!str) return ""; return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+    function escapeHtml(s){ if(!s) return ""; return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
 
     async function loadTasks(){
       try{
-        const params = new URLSearchParams();
-        if (filters.status) params.append("status", filters.status);
-        if (filters.priority) params.append("priority", filters.priority);
-        if (filters.title) params.append("title", filters.title);
+        const res = await authFetch(`${API_BASE}/tasks/all`);
+        if (!res.ok) throw new Error(await res.text() || "Görevler alınamadı");
+        let tasks = await res.json();
 
-        const url = params.toString()? `${API_BASE}/tasks?${params}` : `${API_BASE}/tasks`;
-        const res = await authFetch(url);
-        if (!res.ok) throw new Error(await res.text() || "Görevler yüklenemedi");
-        const tasks = await res.json();
+        tasks = tasks.filter(t=>{
+          if (filters.status && t.status !== filters.status) return false;
+          if (filters.priority && t.priority !== filters.priority) return false;
+          if (filters.title && !t.title.toLowerCase().includes(filters.title.toLowerCase())) return false;
+          if (filters.username && !(t.username||"").toLowerCase().includes(filters.username.toLowerCase())) return false;
+          return true;
+        });
         render(tasks);
-      }catch(e){
-        console.error(e); alert("Görevler alınırken hata oluştu.");
-      }
+      }catch(e){ console.error(e); alert("Görevler alınırken hata oluştu."); }
     }
 
     function render(tasks){
@@ -126,7 +134,7 @@
               <span class="badge ${t.priority==='LOW'?'pri-low':t.priority==='MEDIUM'?'pri-medium':'pri-high'}">Priority: ${t.priority}</span>
               ${t.dueDate ? `<span class="badge">Due: ${t.dueDate}</span>` : ""}
             </div>
-            <span class="small muted right">@${escapeHtml(t.username || 'Me')}</span>
+            <span class="small muted right">by @${escapeHtml(t.username || '-')}, #${t.userId}</span>
           </div>
         `;
         list.appendChild(li);
@@ -163,15 +171,17 @@
     });
 
     const searchEl = document.getElementById("search-input");
+    const userEl = document.getElementById("user-search");
     searchEl.addEventListener("input", debounce(()=>{ filters.title = searchEl.value.trim(); loadTasks(); }, 300));
-    searchEl.addEventListener("keypress", (e)=>{ if (e.key === "Enter") e.preventDefault(); });
+    userEl.addEventListener("input", debounce(()=>{ filters.username = userEl.value.trim(); loadTasks(); }, 300));
+    [searchEl, userEl].forEach(el => el.addEventListener("keypress", e=>{ if (e.key==="Enter") e.preventDefault(); }));
 
     document.getElementById("clear-filters").addEventListener("click", ()=>{
-      filters.status = ""; filters.priority = ""; filters.title = "";
-      document.querySelectorAll("#chip-status .chip, #chip-priority .chip").forEach((c,i)=>{
-        c.classList.toggle("active", c.dataset.status==="" || c.dataset.priority==="");
+      filters.status=""; filters.priority=""; filters.title=""; filters.username="";
+      document.querySelectorAll("#chip-status .chip, #chip-priority .chip").forEach((c)=>{
+        const isAll = c.dataset.status==="" || c.dataset.priority===""; c.classList.toggle("active", isAll);
       });
-      searchEl.value = "";
+      searchEl.value=""; userEl.value="";
       loadTasks();
     });
 

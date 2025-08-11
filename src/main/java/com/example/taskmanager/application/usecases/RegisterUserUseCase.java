@@ -1,5 +1,6 @@
 package com.example.taskmanager.application.usecases;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -32,6 +33,7 @@ public class RegisterUserUseCase {
 
         return userRepository.save(user);
     }
+
     public User updateUser(User user) {
         return userRepository.save(user);
     }
@@ -39,18 +41,18 @@ public class RegisterUserUseCase {
     public void deleteUser(Long id) {
         userRepository.deleteById(id);
     }
-    public User updateUserRole(Long userId, String newRole) {
-    Optional<User> userOpt = userRepository.findById(userId);
 
-    if (userOpt.isEmpty()) {
-        throw new IllegalArgumentException("User not found");
+    public User updateUserRole(Long userId, String newRole) {
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            throw new IllegalArgumentException("User not found");
+        }
+        User user = userOpt.get();
+        user.setRole(newRole);
+        return userRepository.save(user);
     }
 
-    User user = userOpt.get();
-    user.setRole(newRole);
-
-    return userRepository.save(user);
-}
-
-
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
 }

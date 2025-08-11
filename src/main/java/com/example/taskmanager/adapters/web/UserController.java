@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.taskmanager.adapters.web.dto.AdminUserResponse;
 import com.example.taskmanager.adapters.web.dto.UserUpdateRequest;
 import com.example.taskmanager.application.usecases.ActionLogService;
 import com.example.taskmanager.application.usecases.RegisterUserUseCase;
@@ -86,6 +87,13 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+     @PreAuthorize("hasRole('ROLE_ADMIN')")
+        @GetMapping("/{id}")
+        public ResponseEntity<?> getUserByIdForAdmin(@PathVariable Long id) {
+            return registerUserUseCase.getUserById(id)
+                    .<ResponseEntity<?>>map(u -> ResponseEntity.ok(new AdminUserResponse(u)))
+                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found"));
+    }
 
 
 }

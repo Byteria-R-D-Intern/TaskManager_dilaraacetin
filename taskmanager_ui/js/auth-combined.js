@@ -1,4 +1,3 @@
-// Panel geçişleri ve login/register akışı
 window.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('container');
   const signUpButton = document.getElementById('signUp');
@@ -7,7 +6,6 @@ window.addEventListener('DOMContentLoaded', () => {
   signUpButton?.addEventListener('click', (e) => { e.preventDefault(); container?.classList.add("right-panel-active"); });
   signInButton?.addEventListener('click', (e) => { e.preventDefault(); container?.classList.remove("right-panel-active"); });
 
-  // ---- Login ----
   const loginForm = document.getElementById("login-form");
   loginForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -25,13 +23,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
       const data = await res.json();
       localStorage.setItem("jwtToken", data.token);
-      window.location.href = "menu.html"; // menüye yönlendir
+      window.location.href = "menu.html"; 
     } catch (err) {
       showMsg("login-error", "Bağlantı hatası. Tekrar deneyin."); console.error(err);
     }
   });
 
-  // ---- Register ----
   const registerForm = document.getElementById("register-form");
   registerForm?.addEventListener("submit", async (e) => {
     e.preventDefault();

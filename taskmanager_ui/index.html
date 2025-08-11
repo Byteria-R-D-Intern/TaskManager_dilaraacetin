@@ -19,7 +19,6 @@
 
     .card{ background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px; }
 
-    /* Toolbar */
     .toolbar{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:10px 0 12px; border-bottom:1px solid var(--border); margin-bottom:12px; }
     .filters{ display:flex; gap:16px; flex-wrap:wrap; }
     .chips{ display:flex; gap:8px; flex-wrap:wrap; }
@@ -35,14 +34,12 @@
 
     .sort select{ padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:#fff; }
 
-    /* Yeni görev formu */
     form.grid-form{ display:grid; gap:10px; }
     input[type="text"], input[type="date"], select, textarea{
       width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font: inherit; background:#fff;
     }
     small.muted{ color:var(--muted); }
 
-    /* Tablo */
     .table-wrap{ overflow:auto; }
     table{ width:100%; border-collapse:collapse; }
     thead th{ position:sticky; top:0; background:#f5f7fd; text-align:left; font-weight:600; font-size:14px; border-bottom:1px solid var(--border); padding:10px; }
@@ -71,7 +68,6 @@
 
   <main>
     <div class="grid">
-      <!-- Yeni Görev -->
       <section class="card" id="create-card">
         <h3>Yeni Görev</h3>
         <form id="task-form" class="grid-form" novalidate>
@@ -95,7 +91,6 @@
         <p id="form-msg" class="small muted"></p>
       </section>
 
-      <!-- Liste + Filtreler -->
       <section class="card">
         <div class="toolbar">
           <div class="filters">
@@ -187,12 +182,11 @@
     function escapeHtml(str){ if(!str) return ""; return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
     const prRank = { HIGH:3, MEDIUM:2, LOW:1 };
 
-    let serverTasks = []; // sunucudan gelen (server-side filtreli) ham liste
+    let serverTasks = []; 
 
     function inDateRange(due, from, to){
       if (!from && !to) return true;
-      if (!due) return false; // tarih filtre varken tarihi olmayanı dışla
-      // due format: YYYY-MM-DD
+      if (!due) return false;
       if (from && due < from) return false;
       if (to && due > to) return false;
       return true;
@@ -216,7 +210,7 @@
 
     async function loadTasks() {
       try {
-        // Sunucu tarafı filtreler (status/priority/title)
+
         const params = new URLSearchParams();
         if (filters.status) params.append("status", filters.status);
         if (filters.priority) params.append("priority", filters.priority);
@@ -228,7 +222,6 @@
 
         serverTasks = await res.json();
 
-        // İstemci tarafı tarih/sıralama
         let list = serverTasks.filter(t => inDateRange(t.dueDate, filters.dueFrom, filters.dueTo));
         list = sortTasks(list, filters.sortBy);
 
@@ -266,7 +259,6 @@
       }
     }
 
-    // Yeni görev ekleme
     document.getElementById("task-form").addEventListener("submit", async (e)=>{
       e.preventDefault();
       const title = document.getElementById("title").value.trim();
@@ -291,7 +283,6 @@
       }
     });
 
-    // Filtre/Arama bağlama
     document.getElementById("chip-status").addEventListener("click", (e)=>{
       const btn = e.target.closest("button[data-status]");
       if (!btn) return;
@@ -315,12 +306,10 @@
     searchEl.addEventListener("input", onType);
     searchEl.addEventListener("keypress", (e)=>{ if (e.key === "Enter") e.preventDefault(); });
 
-    // Tarih + Sıralama
     document.getElementById("due-from").addEventListener("change", (e)=>{ filters.dueFrom = e.target.value || ""; loadTasks(); });
     document.getElementById("due-to").addEventListener("change", (e)=>{ filters.dueTo = e.target.value || ""; loadTasks(); });
     document.getElementById("sort-by").addEventListener("change", (e)=>{ filters.sortBy = e.target.value; loadTasks(); });
 
-    // Temizle
     document.getElementById("clear-filters").addEventListener("click", ()=>{
       filters.status = ""; filters.priority = ""; filters.title = ""; filters.dueFrom = ""; filters.dueTo = ""; filters.sortBy = "dueAsc";
       document.querySelectorAll("#chip-status .chip, #chip-priority .chip").forEach(c=>c.classList.remove("active"));

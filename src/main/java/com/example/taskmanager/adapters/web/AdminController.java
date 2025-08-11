@@ -1,14 +1,19 @@
 package com.example.taskmanager.adapters.web;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.taskmanager.adapters.web.dto.AdminUserResponse;
 import com.example.taskmanager.adapters.web.dto.UpdateRoleRequest;
 import com.example.taskmanager.application.usecases.ActionLogService;
 import com.example.taskmanager.application.usecases.RegisterUserUseCase;
@@ -45,6 +50,24 @@ public class AdminController {
         Long adminId = (Long) authentication.getPrincipal();
         actionLogService.log(adminId, "UPDATE_ROLE", "User", id);
 
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(new AdminUserResponse(updated));
+    }
+
+    // NEW: Tüm kullanıcılar (yalnızca ADMIN)
+    @GetMapping("/users")
+    public ResponseEntity<List<AdminUserResponse>> getAllUsers() {
+        List<AdminUserResponse> list = registerUserUseCase.getAllUsers()
+                .stream()
+                .map(AdminUserResponse::new)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(list);
+    }
+
+    // NEW: Tekil kullanıcı (yalnızca ADMIN)
+    @GetMapping("/users/{id}")
+    public ResponseEntity<?> getUserByIdForAdmin(@PathVariable Long id) {
+        return registerUserUseCase.getUserById(id)
+                .<ResponseEntity<?>>map(u -> ResponseEntity.ok(new AdminUserResponse(u)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

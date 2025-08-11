@@ -23,12 +23,13 @@ const API_BASE = "http://localhost:8080/api";
 
 function wireLinks(){
   const go = (url)=>{ window.location.href = url; };
-  document.getElementById("link-tasks")?.addEventListener("click", (e)=>{ e.preventDefault(); go("index.html"); });
-  document.getElementById("link-create")?.addEventListener("click", (e)=>{ e.preventDefault(); go("index.html#new"); });
-  document.getElementById("link-all")?.addEventListener("click", (e)=>{ e.preventDefault(); go("index.html?scope=all"); });
-  document.getElementById("link-stats")?.addEventListener("click", (e)=>{ e.preventDefault(); go("index.html#stats"); });
-  document.getElementById("link-profile")?.addEventListener("click", (e)=>{ e.preventDefault(); alert("Profil sayfası henüz eklenmedi."); });
-  document.getElementById("link-logs")?.addEventListener("click", (e)=>{ e.preventDefault(); alert("Logs sayfası (ADMIN) henüz eklenmedi."); });
+
+  document.getElementById("link-tasks")?.addEventListener("click", (e)=>{ e.preventDefault(); go("my-tasks.html"); });
+  document.getElementById("link-create")?.addEventListener("click", (e)=>{ e.preventDefault(); go("create-task.html"); });
+  document.getElementById("link-all")?.addEventListener("click", (e)=>{ e.preventDefault(); go("all-tasks.html"); });
+  document.getElementById("link-stats")?.addEventListener("click", (e)=>{ e.preventDefault(); go("stats.html"); });
+  document.getElementById("link-users")?.addEventListener("click", (e)=>{ e.preventDefault(); go("users-admin.html"); });
+  document.getElementById("link-logs")?.addEventListener("click", (e)=>{ e.preventDefault(); go("logs.html"); });
   document.getElementById("link-home")?.addEventListener("click", (e)=>{ e.preventDefault(); window.scrollTo({top:0, behavior:"smooth"}); });
   document.getElementById("link-contact")?.addEventListener("click", (e)=>{ e.preventDefault(); alert("İletişim: support@example.com"); });
 }
