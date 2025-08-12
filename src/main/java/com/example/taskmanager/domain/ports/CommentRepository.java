@@ -7,4 +7,7 @@ import com.example.taskmanager.domain.model.Comment;
 public interface CommentRepository {
     Comment save(Comment comment);
     List<Comment> findByTaskId(Long taskId);
+
+    void deleteByTaskId(Long taskId);
+    void deleteByTaskIdIn(List<Long> taskIds);
 }

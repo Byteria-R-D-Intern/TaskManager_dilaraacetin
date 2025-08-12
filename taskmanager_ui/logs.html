@@ -2,41 +2,31 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <title>Task Manager – Logs</title>
+  <title>Task Manager – Logs (Admin)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/tasks.css" />
   <style>
-    :root{ --border:#e6e9f2; --text:#0f172a; --muted:#5b6474; --primary:#4f7cff; --bg:#fafbfe; }
-    *{ box-sizing:border-box; } body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; color:var(--text); background:var(--bg); }
-    header{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; background:#fff; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:10; }
-    .brand{ font-weight:700; } .actions{ display:flex; gap:8px; }
-    .btn{ border:1px solid var(--border); background:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; }
-    .btn.primary{ background:var(--primary); border-color:var(--primary); color:#fff; }
-    .btn:disabled{ opacity:.7; cursor:not-allowed; }
-    main{ max-width:1200px; margin:20px auto; padding:0 16px 40px; }
-    .card{ background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px; }
-
-    .toolbar{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:10px 0 12px; border-bottom:1px solid var(--border); margin-bottom:12px; }
-    .filters{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .filters input{ padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:#fff; min-width:180px; }
-    .hint{ color:var(--muted); font-size:13px; }
-
+    .toolbar .btn-group{ display:flex; gap:8px; flex-wrap:wrap; }
+    .btn.toggle{ background:#fff; border:1px solid var(--border); }
+    .btn.toggle.active{ background:var(--primary); color:#fff; border-color:var(--primary); }
     .table-wrap{ overflow:auto; }
-    table{ width:100%; border-collapse:collapse; }
-    thead th{ position:sticky; top:0; background:#f5f7fd; text-align:left; font-weight:600; font-size:14px; border-bottom:1px solid var(--border); padding:10px; }
-    tbody td{ border-bottom:1px solid var(--border); padding:10px; vertical-align:top; font-size:14px; }
+    table{ width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+    thead th{ text-align:left; font-weight:600; font-size:14px; padding:12px; background:#f6f8ff; border-bottom:1px solid var(--border); white-space:nowrap; }
+    tbody td{ padding:12px; border-bottom:1px solid var(--border); font-size:14px; }
     tbody tr:hover{ background:#fafcff; }
-    .col-id{ width:80px; }
-    .col-ts{ white-space:nowrap; }
-    .badge{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid var(--border); }
-    .badge.action-UPDATE, .badge.action_UPDATE{ background:#fff7ed; border-color:#ffd7a8; }
-    .badge.action-CREATE, .badge.action_CREATE{ background:#ecfdf5; border-color:#a7f3d0; }
-    .badge.action-DELETE, .badge.action_DELETE{ background:#fff1f2; border-color:#fecdd3; }
-    .badge.action-UPDATE_ROLE{ background:#eef2ff; border-color:#c7d2fe; }
-    #summary{ margin:6px 0 0; color:var(--muted); font-size:13px; }
+    .col-id{ width:90px; }
+    .col-uid{ width:110px; }
+    .col-action{ width:140px; white-space:nowrap; }
+    .col-resource{ width:140px; white-space:nowrap; }
+    .muted{ color:var(--muted); }
+    .pagination{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .pagination .btn{ padding:8px 10px; }
+    .select{ padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff; }
+    .summary{ color:var(--muted); font-size:13px; }
   </style>
 </head>
 <body>
-  <header>
+  <header class="appbar">
     <div class="brand">Logs</div>
     <div class="actions">
       <button class="btn" id="menu-btn">Menü</button>
@@ -45,129 +35,192 @@
     </div>
   </header>
 
-  <main>
+  <main class="container">
     <section class="card">
       <div class="toolbar">
         <div class="filters">
-          <label for="userId" class="hint">Kullanıcı ID (opsiyonel):</label>
-          <input type="number" id="userId" placeholder="Örn: 12" min="1" />
-          <button class="btn primary" id="load-btn">Yükle</button>
+          <div class="filter-group">
+            <span class="group-title">Quick Range</span>
+            <div class="btn-group" id="range-buttons">
+              <button class="btn toggle" data-limit="10">Last 10</button>
+              <button class="btn toggle active" data-limit="30">Last 30</button>
+              <button class="btn toggle" data-limit="50">Last 50</button>
+              <button class="btn toggle" data-limit="100">Last 100</button>
+              <button class="btn" id="clear-range" title="Tümünü göster">Clear</button>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <span class="group-title">Search</span>
+            <input type="text" id="search" class="input" placeholder="Ara: userId / action / resource / resourceId" />
+          </div>
         </div>
-        <div class="hint" id="updated"></div>
+
+        <div class="filter-group">
+          <span class="group-title">Paging</span>
+          <div class="pagination">
+            <button class="btn" id="prev">&larr; Prev</button>
+            <span id="page-label" class="summary">Page 1 / 1</span>
+            <button class="btn" id="next">Next &rarr;</button>
+            <select id="page-size" class="select">
+              <option value="10">10 / page</option>
+              <option value="25" selected>25 / page</option>
+              <option value="50">50 / page</option>
+              <option value="100">100 / page</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div id="summary"></div>
+      <div class="summary" id="updated" style="margin:6px 0 12px;"></div>
 
       <div class="table-wrap">
-        <table id="logs-table" aria-describedby="summary">
+        <table>
           <thead>
             <tr>
               <th class="col-id">ID</th>
-              <th>User ID</th>
-              <th>Action</th>
-              <th>Resource</th>
+              <th class="col-uid">User ID</th>
+              <th class="col-action">Action</th>
+              <th class="col-resource">Resource</th>
               <th>Resource ID</th>
-              <th class="col-ts">Timestamp</th>
+              <th>Timestamp</th>
             </tr>
           </thead>
           <tbody id="logs-tbody"></tbody>
         </table>
       </div>
+
+      <div id="empty" class="empty" style="display:none;">Kayıt bulunamadı.</div>
     </section>
   </main>
 
   <script>
     const API_BASE = "http://localhost:8080/api";
     const token = localStorage.getItem("jwtToken");
-    if (!token) { window.location.href = "auth.html"; }
+    if (!token) location.href = "auth.html";
 
-    const role = getRoleFromJWT(token);
-    if (role !== "ROLE_ADMIN") {
-      alert("Bu sayfaya erişim yetkiniz yok.");
-      window.location.href = "menu.html";
-    }
-
-    document.getElementById("menu-btn").addEventListener("click", ()=>{ window.location.href = "menu.html"; });
-    document.getElementById("logout-btn").addEventListener("click", ()=>{ localStorage.removeItem("jwtToken"); window.location.href = "auth.html"; });
-
-    document.getElementById("load-btn").addEventListener("click", loadLogs);
-    document.getElementById("refresh-btn").addEventListener("click", loadLogs);
-
-    function getRoleFromJWT(t){
-      try{ const p=t.split(".")[1]; return JSON.parse(atob(p.replace(/-/g,"+").replace(/_/g,"/"))).role; }catch(_){ return null; }
-    }
+    document.getElementById("menu-btn").addEventListener("click", ()=>location.href="menu.html");
+    document.getElementById("logout-btn").addEventListener("click", ()=>{ localStorage.removeItem("jwtToken"); location.href="auth.html"; });
+    document.getElementById("refresh-btn").addEventListener("click", fetchLogs);
 
     async function authFetch(url, options = {}) {
       const headers = options.headers || {};
       const res = await fetch(url, {
         ...options,
-        headers: { ...headers, "Authorization": `Bearer ${token}`, ...(options.method && options.method !== "GET" ? { "Content-Type": "application/json" } : {}) }
+        headers: { ...headers, "Authorization": `Bearer ${token}`, ...(options.method && options.method!=="GET" ? {"Content-Type":"application/json"} : {}) }
       });
       if (res.status === 401 || res.status === 403) {
-        alert("Oturum süreniz doldu veya yetkiniz yok. Lütfen tekrar giriş yapın.");
-        localStorage.removeItem("jwtToken");
-        window.location.href = "auth.html";
-        throw new Error("Unauthorized");
+        alert("Oturum süresi doldu / yetki yok."); localStorage.removeItem("jwtToken"); location.href="auth.html"; throw new Error("Unauthorized");
       }
       return res;
     }
-
-    function fmtTs(ts){
-      if (!ts) return "-";
-      if (typeof ts === "string") return ts.replace("T"," ");
-      return String(ts);
+    function debounce(fn, wait=300){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; }
+    function fmt(ts){
+      try { return new Date(ts).toLocaleString('tr-TR'); }
+      catch { return ts; }
     }
-    function escapeHtml(s){ if(!s) return ""; return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
 
-    async function loadLogs(){
-      const userIdVal = document.getElementById("userId").value.trim();
-      const url = userIdVal ? `${API_BASE}/logs/${encodeURIComponent(userIdVal)}` : `${API_BASE}/logs`;
+    let allLogs = [];          
+    let currentLimit = 30;     
+    let searchTerm = "";
+    let page = 1;
+    let pageSize = 25;
 
+    document.getElementById("range-buttons").addEventListener("click", (e)=>{
+      const btn = e.target.closest("button[data-limit]");
+      if (!btn) return;
+      currentLimit = parseInt(btn.dataset.limit,10);
+      document.querySelectorAll("#range-buttons .toggle").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      page = 1;
+      render();
+    });
+    document.getElementById("clear-range").addEventListener("click", ()=>{
+      currentLimit = null;
+      document.querySelectorAll("#range-buttons .toggle").forEach(b=>b.classList.remove("active"));
+      page = 1;
+      render();
+    });
+
+    document.getElementById("search").addEventListener("input", debounce((e)=>{
+      searchTerm = e.target.value.trim().toLowerCase();
+      page = 1;
+      render();
+    }, 250));
+
+    document.getElementById("prev").addEventListener("click", ()=>{ if (page>1){ page--; render(); }});
+    document.getElementById("next").addEventListener("click", ()=>{ const total = getFiltered().length; const pages = Math.max(1, Math.ceil(total/pageSize)); if (page<pages){ page++; render(); }});
+    document.getElementById("page-size").addEventListener("change", (e)=>{ pageSize = parseInt(e.target.value,10); page = 1; render(); });
+
+    async function fetchLogs(){
       try{
-        const res = await authFetch(url);
+        const res = await authFetch(`${API_BASE}/logs`);
         if (!res.ok) throw new Error(await res.text() || "Loglar alınamadı");
-        const all = await res.json();
+        const logs = await res.json();
 
-        const list = [...all].sort((a,b)=>{
-          const ta = a.timestamp || "", tb = b.timestamp || "";
-          return tb.localeCompare(ta);
-        }).slice(0, 30);
-
-        render(list, all.length);
-        document.getElementById("updated").textContent = `Güncellendi: ${new Date().toLocaleString()}`;
+        allLogs = (Array.isArray(logs)? logs: []).slice().sort((a,b)=>{
+          const ta = (a.timestamp||""); const tb = (b.timestamp||"");
+          return (tb > ta) ? 1 : (tb < ta ? -1 : 0);
+        });
+        page = 1;
+        document.getElementById("updated").textContent = "Güncellendi: " + new Date().toLocaleString();
+        render();
       }catch(e){
-        console.error(e);
-        alert("Loglar alınırken hata oluştu.");
+        console.error(e); alert("Loglar alınırken hata oluştu.");
       }
     }
 
-    function render(rows, total){
+    function getFiltered(){
+      let list = allLogs;
+      if (searchTerm){
+        list = list.filter(l=>{
+          const hay = `${l.id??""} ${l.userId??""} ${l.action??""} ${l.resource??""} ${l.resourceId??""}`.toLowerCase();
+          return hay.includes(searchTerm);
+        });
+      }
+      if (currentLimit != null){
+        list = list.slice(0, currentLimit);
+      }
+      return list;
+    }
+
+    function render(){
       const tbody = document.getElementById("logs-tbody");
-      const summary = document.getElementById("summary");
+      const empty = document.getElementById("empty");
       tbody.innerHTML = "";
 
-      summary.textContent = `Gösterilen: ${rows.length} / Toplam: ${total} (son 30 kayıt)`;
-
-      if (!rows.length){
-        tbody.innerHTML = `<tr><td colspan="6"><small class="hint">Kayıt bulunamadı.</small></td></tr>`;
+      const data = getFiltered();
+      if (!data.length){
+        empty.style.display = "";
+        document.getElementById("page-label").textContent = "Page 1 / 1";
         return;
       }
+      empty.style.display = "none";
 
-      for (const r of rows){
+      const pages = Math.max(1, Math.ceil(data.length / pageSize));
+      if (page > pages) page = pages;
+
+      const start = (page-1)*pageSize;
+      const end = start + pageSize;
+      const pageData = data.slice(start, end);
+
+      for (const log of pageData){
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${r.id ?? "-"}</td>
-          <td>${r.userId ?? "-"}</td>
-          <td><span class="badge action-${escapeHtml(r.action)}">${escapeHtml(r.action)}</span></td>
-          <td>${escapeHtml(r.resource)}</td>
-          <td>${r.resourceId ?? "-"}</td>
-          <td class="col-ts">${fmtTs(r.timestamp)}</td>
+          <td>${log.id ?? "-"}</td>
+          <td>${log.userId ?? "-"}</td>
+          <td>${log.action ?? "-"}</td>
+          <td>${log.resource ?? "-"}</td>
+          <td>${log.resourceId ?? "-"}</td>
+          <td><span class="muted">${fmt(log.timestamp ?? "")}</span></td>
         `;
         tbody.appendChild(tr);
       }
+
+      document.getElementById("page-label").textContent = `Page ${page} / ${pages}`;
     }
 
-    loadLogs();
+    fetchLogs();
   </script>
 </body>
 </html>

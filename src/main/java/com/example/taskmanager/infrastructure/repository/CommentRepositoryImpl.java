@@ -33,4 +33,15 @@ public class CommentRepositoryImpl implements CommentRepository {
                 .map(CommentMapper::toDomain)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public void deleteByTaskId(Long taskId) {
+        jpaCommentRepository.deleteByTaskId(taskId);
+    }
+
+    @Override
+    public void deleteByTaskIdIn(List<Long> taskIds) {
+        if (taskIds == null || taskIds.isEmpty()) return;
+        jpaCommentRepository.deleteByTaskIdIn(taskIds);
+    }
 }

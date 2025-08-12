@@ -11,6 +11,7 @@ import com.example.taskmanager.application.usecases.LoginUserUseCase;
 import com.example.taskmanager.application.usecases.RegisterUserUseCase;
 import com.example.taskmanager.application.usecases.UpdateTaskUseCase;
 import com.example.taskmanager.config.JwtUtil;
+import com.example.taskmanager.domain.ports.CommentRepository;
 import com.example.taskmanager.domain.ports.TaskRepository;
 import com.example.taskmanager.domain.ports.UserRepository;
 
@@ -21,7 +22,7 @@ public class TaskmanagerApplication {
 
     public static void main(String[] args) {
         Dotenv dotenv = Dotenv.configure()
-                              .ignoreIfMissing() 
+                              .ignoreIfMissing()
                               .load();
         dotenv.entries().forEach(entry ->
             System.setProperty(entry.getKey(), entry.getValue())
@@ -32,8 +33,10 @@ public class TaskmanagerApplication {
 
     @Bean
     public RegisterUserUseCase registerUserUseCase(UserRepository userRepository,
-                                                   BCryptPasswordEncoder passwordEncoder) {
-        return new RegisterUserUseCase(userRepository, passwordEncoder);
+                                                   BCryptPasswordEncoder passwordEncoder,
+                                                   TaskRepository taskRepository,
+                                                   CommentRepository commentRepository) {
+        return new RegisterUserUseCase(userRepository, passwordEncoder, taskRepository, commentRepository);
     }
 
     @Bean

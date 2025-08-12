@@ -53,7 +53,6 @@ public class AdminController {
         return ResponseEntity.ok(new AdminUserResponse(updated));
     }
 
-    // NEW: Tüm kullanıcılar (yalnızca ADMIN)
     @GetMapping("/users")
     public ResponseEntity<List<AdminUserResponse>> getAllUsers() {
         List<AdminUserResponse> list = registerUserUseCase.getAllUsers()
@@ -63,7 +62,6 @@ public class AdminController {
         return ResponseEntity.ok(list);
     }
 
-    // NEW: Tekil kullanıcı (yalnızca ADMIN)
     @GetMapping("/users/{id}")
     public ResponseEntity<?> getUserByIdForAdmin(@PathVariable Long id) {
         return registerUserUseCase.getUserById(id)

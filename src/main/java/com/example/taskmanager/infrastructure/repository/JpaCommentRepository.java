@@ -8,4 +8,8 @@ import com.example.taskmanager.infrastructure.entity.CommentEntity;
 
 public interface JpaCommentRepository extends JpaRepository<CommentEntity, Long> {
     List<CommentEntity> findByTaskId(Long taskId);
+
+    // YENİ:
+    void deleteByTaskId(Long taskId);
+    void deleteByTaskIdIn(List<Long> taskIds);
 }
