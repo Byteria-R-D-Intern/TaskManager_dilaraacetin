@@ -32,6 +32,7 @@ function wireLinks(){
   document.getElementById("link-logs")?.addEventListener("click", (e)=>{ e.preventDefault(); go("logs.html"); });
   document.getElementById("link-home")?.addEventListener("click", (e)=>{ e.preventDefault(); window.scrollTo({top:0, behavior:"smooth"}); });
   document.getElementById("link-contact")?.addEventListener("click", (e)=>{ e.preventDefault(); alert("İletişim: support@example.com"); });
+  document.getElementById("link-notifs")?.addEventListener("click", (e)=>{ e.preventDefault(); go("my-notifications.html"); });
 }
 
 function toggleRoleMenu(role){

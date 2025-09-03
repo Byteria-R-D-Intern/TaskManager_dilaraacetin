@@ -12,25 +12,30 @@
     .table-wrap{ overflow:auto; }
     table{ width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden; }
     thead th{ text-align:left; font-weight:600; font-size:14px; padding:12px; background:#f6f8ff; border-bottom:1px solid var(--border); white-space:nowrap; }
-    tbody td{ padding:12px; border-bottom:1px solid var(--border); font-size:14px; }
+    tbody td{ padding:12px; border-bottom:1px solid var(--border); font-size:14px; vertical-align:top; }
     tbody tr:hover{ background:#fafcff; }
-    .col-id{ width:90px; }
-    .col-uid{ width:110px; }
+    .col-id{ width:84px; }
+    .col-user{ width:140px; white-space:nowrap; }
     .col-action{ width:140px; white-space:nowrap; }
-    .col-resource{ width:140px; white-space:nowrap; }
+    .col-resource{ width:160px; white-space:nowrap; }
     .muted{ color:var(--muted); }
-    .pagination{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-    .pagination .btn{ padding:8px 10px; }
-    .select{ padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff; }
     .summary{ color:var(--muted); font-size:13px; }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; }
+    .nowrap{ white-space:nowrap; }
+    .pill{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--border); background:#f7f7ff; font-size:12px; }
+    .live{ display:inline-flex; gap:6px; align-items:center; }
+    .dot{ width:8px; height:8px; border-radius:50%; background:#6ee7a9; box-shadow:0 0 0 0 rgba(110,231,169,.8); animation:pulse 1.4s infinite; }
+    @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(110,231,169,.7)} 70%{box-shadow:0 0 0 9px rgba(110,231,169,0)} 100%{box-shadow:0 0 0 0 rgba(110,231,169,0)}}
+    .json{ max-width:420px; max-height:60px; overflow:auto; background:#fbfbff; border:1px dashed var(--border); border-radius:8px; padding:6px 8px; }
   </style>
 </head>
 <body>
   <header class="appbar">
     <div class="brand">Logs</div>
     <div class="actions">
-      <button class="btn" id="menu-btn">Menü</button>
+      <span id="live-ind" class="live"><span class="dot"></span><span class="small muted">Live</span></span>
       <button class="btn" id="refresh-btn">Yenile</button>
+      <button class="btn" id="menu-btn">Menü</button>
       <button class="btn" id="logout-btn">Çıkış</button>
     </div>
   </header>
@@ -52,17 +57,25 @@
 
           <div class="filter-group">
             <span class="group-title">Search</span>
-            <input type="text" id="search" class="input" placeholder="Ara: userId / action / resource / resourceId" />
+            <input type="text" id="search" class="input" placeholder="Ara: actor/target/action/resource/resourceId" style="min-width:320px;" />
+          </div>
+
+          <div class="filter-group">
+            <span class="group-title">Fields</span>
+            <input type="number" id="f-actor" class="input" placeholder="actorUserId" style="width:120px;" />
+            <input type="number" id="f-target" class="input" placeholder="targetUserId" style="width:120px;" />
+            <input type="text"   id="f-action" class="input" placeholder="action" style="width:140px;" />
+            <input type="text"   id="f-resource" class="input" placeholder="resourceType" style="width:160px;" />
           </div>
         </div>
 
         <div class="filter-group">
           <span class="group-title">Paging</span>
-          <div class="pagination">
+          <div>
             <button class="btn" id="prev">&larr; Prev</button>
             <span id="page-label" class="summary">Page 1 / 1</span>
             <button class="btn" id="next">Next &rarr;</button>
-            <select id="page-size" class="select">
+            <select id="page-size" class="input" style="width:120px;">
               <option value="10">10 / page</option>
               <option value="25" selected>25 / page</option>
               <option value="50">50 / page</option>
@@ -79,10 +92,12 @@
           <thead>
             <tr>
               <th class="col-id">ID</th>
-              <th class="col-uid">User ID</th>
+              <th class="col-user">Actor</th>
+              <th class="col-user">Target</th>
               <th class="col-action">Action</th>
               <th class="col-resource">Resource</th>
               <th>Resource ID</th>
+              <th>Details</th>
               <th>Timestamp</th>
             </tr>
           </thead>
@@ -99,67 +114,81 @@
     const token = localStorage.getItem("jwtToken");
     if (!token) location.href = "auth.html";
 
+    (function guard(){
+      try{
+        const p = JSON.parse(atob(token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+        if (p.role !== "ROLE_ADMIN") { alert("Bu sayfaya erişim yetkiniz yok."); location.href="menu.html"; }
+      }catch{ location.href="auth.html"; }
+    })();
+
     document.getElementById("menu-btn").addEventListener("click", ()=>location.href="menu.html");
     document.getElementById("logout-btn").addEventListener("click", ()=>{ localStorage.removeItem("jwtToken"); location.href="auth.html"; });
     document.getElementById("refresh-btn").addEventListener("click", fetchLogs);
 
-    async function authFetch(url, options = {}) {
+    function authFetch(url, options = {}) {
       const headers = options.headers || {};
-      const res = await fetch(url, {
+      return fetch(url, {
         ...options,
         headers: { ...headers, "Authorization": `Bearer ${token}`, ...(options.method && options.method!=="GET" ? {"Content-Type":"application/json"} : {}) }
+      }).then(async res=>{
+        if (res.status === 401 || res.status === 403) {
+          alert("Oturum süresi doldu / yetki yok."); localStorage.removeItem("jwtToken"); location.href="auth.html"; throw new Error("Unauthorized");
+        }
+        return res;
       });
-      if (res.status === 401 || res.status === 403) {
-        alert("Oturum süresi doldu / yetki yok."); localStorage.removeItem("jwtToken"); location.href="auth.html"; throw new Error("Unauthorized");
-      }
-      return res;
     }
-    function debounce(fn, wait=300){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; }
-    function fmt(ts){
-      try { return new Date(ts).toLocaleString('tr-TR'); }
-      catch { return ts; }
-    }
+    const debounce = (fn,wait=300)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),wait); }; };
+    const fmt = ts => { try { return new Date(ts).toLocaleString('tr-TR'); } catch { return ts; } };
+    const esc = s => (s==null? "" : String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"));
 
-    let allLogs = [];          
-    let currentLimit = 30;     
-    let searchTerm = "";
-    let page = 1;
-    let pageSize = 25;
+    let allLogs = [];
+    let page = 1, pageSize = 25;
+    let currentLimit = 30; 
+    let textSearch = "";
+    const fieldFilters = { actor:null, target:null, action:"", resource:"" };
 
     document.getElementById("range-buttons").addEventListener("click", (e)=>{
       const btn = e.target.closest("button[data-limit]");
       if (!btn) return;
       currentLimit = parseInt(btn.dataset.limit,10);
       document.querySelectorAll("#range-buttons .toggle").forEach(b=>b.classList.remove("active"));
-      btn.classList.add("active");
-      page = 1;
-      render();
+      btn.classList.add("active"); page=1; render();
     });
     document.getElementById("clear-range").addEventListener("click", ()=>{
       currentLimit = null;
       document.querySelectorAll("#range-buttons .toggle").forEach(b=>b.classList.remove("active"));
-      page = 1;
-      render();
+      page=1; render();
     });
-
-    document.getElementById("search").addEventListener("input", debounce((e)=>{
-      searchTerm = e.target.value.trim().toLowerCase();
-      page = 1;
-      render();
-    }, 250));
+    document.getElementById("search").addEventListener("input", debounce(e=>{ textSearch = e.target.value.trim().toLowerCase(); page=1; render(); }, 250));
+    document.getElementById("f-actor").addEventListener("input", debounce(e=>{ fieldFilters.actor = e.target.value? Number(e.target.value) : null; page=1; render(); }, 250));
+    document.getElementById("f-target").addEventListener("input", debounce(e=>{ fieldFilters.target = e.target.value? Number(e.target.value) : null; page=1; render(); }, 250));
+    document.getElementById("f-action").addEventListener("input", debounce(e=>{ fieldFilters.action = e.target.value.trim(); page=1; render(); }, 250));
+    document.getElementById("f-resource").addEventListener("input", debounce(e=>{ fieldFilters.resource = e.target.value.trim(); page=1; render(); }, 250));
 
     document.getElementById("prev").addEventListener("click", ()=>{ if (page>1){ page--; render(); }});
     document.getElementById("next").addEventListener("click", ()=>{ const total = getFiltered().length; const pages = Math.max(1, Math.ceil(total/pageSize)); if (page<pages){ page++; render(); }});
-    document.getElementById("page-size").addEventListener("change", (e)=>{ pageSize = parseInt(e.target.value,10); page = 1; render(); });
+    document.getElementById("page-size").addEventListener("change", (e)=>{ pageSize = parseInt(e.target.value,10); page=1; render(); });
+
+    function normalizeLog(l){
+      return {
+        id: l.id ?? null,
+        actorUserId: l.actorUserId ?? l.userId ?? null,
+        targetUserId: l.targetUserId ?? null,
+        action: l.action ?? l.action_type ?? "",
+        resourceType: l.resource ?? l.resource_type ?? "",
+        resourceId: l.resourceId ?? null,
+        details: (typeof l.details === "string" ? l.details : (l.details ? JSON.stringify(l.details) : null)),
+        timestamp: l.timestamp ?? l.created_at ?? null
+      };
+    }
 
     async function fetchLogs(){
       try{
         const res = await authFetch(`${API_BASE}/logs`);
         if (!res.ok) throw new Error(await res.text() || "Loglar alınamadı");
-        const logs = await res.json();
-
-        allLogs = (Array.isArray(logs)? logs: []).slice().sort((a,b)=>{
-          const ta = (a.timestamp||""); const tb = (b.timestamp||"");
+        const data = await res.json();
+        allLogs = (Array.isArray(data)? data: []).map(normalizeLog).sort((a,b)=>{
+          const ta = a.timestamp || ""; const tb = b.timestamp || "";
           return (tb > ta) ? 1 : (tb < ta ? -1 : 0);
         });
         page = 1;
@@ -172,15 +201,17 @@
 
     function getFiltered(){
       let list = allLogs;
-      if (searchTerm){
+      if (textSearch){
         list = list.filter(l=>{
-          const hay = `${l.id??""} ${l.userId??""} ${l.action??""} ${l.resource??""} ${l.resourceId??""}`.toLowerCase();
-          return hay.includes(searchTerm);
+          const hay = `${l.id??""} ${l.actorUserId??""} ${l.targetUserId??""} ${l.action??""} ${l.resourceType??""} ${l.resourceId??""}`.toLowerCase();
+          return hay.includes(textSearch);
         });
       }
-      if (currentLimit != null){
-        list = list.slice(0, currentLimit);
-      }
+      if (fieldFilters.actor != null)  list = list.filter(l => Number(l.actorUserId) === fieldFilters.actor);
+      if (fieldFilters.target != null) list = list.filter(l => Number(l.targetUserId) === fieldFilters.target);
+      if (fieldFilters.action)         list = list.filter(l => (l.action||"").toLowerCase().includes(fieldFilters.action.toLowerCase()));
+      if (fieldFilters.resource)       list = list.filter(l => (l.resourceType||"").toLowerCase().includes(fieldFilters.resource.toLowerCase()));
+      if (currentLimit != null)        list = list.slice(0, currentLimit);
       return list;
     }
 
@@ -199,20 +230,22 @@
 
       const pages = Math.max(1, Math.ceil(data.length / pageSize));
       if (page > pages) page = pages;
-
       const start = (page-1)*pageSize;
       const end = start + pageSize;
-      const pageData = data.slice(start, end);
 
-      for (const log of pageData){
+      for (const log of data.slice(start,end)){
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${log.id ?? "-"}</td>
-          <td>${log.userId ?? "-"}</td>
-          <td>${log.action ?? "-"}</td>
-          <td>${log.resource ?? "-"}</td>
-          <td>${log.resourceId ?? "-"}</td>
-          <td><span class="muted">${fmt(log.timestamp ?? "")}</span></td>
+          <td class="nowrap mono">#${esc(log.id)}</td>
+          <td class="nowrap"><span class="pill">actor:</span> <span class="mono">${esc(log.actorUserId ?? "-")}</span></td>
+          <td class="nowrap"><span class="pill">target:</span> <span class="mono">${esc(log.targetUserId ?? "-")}</span></td>
+          <td class="nowrap">${esc(log.action || "-")}</td>
+          <td class="nowrap">${esc(log.resourceType || "-")}</td>
+          <td class="nowrap mono">${esc(log.resourceId ?? "-")}</td>
+          <td>
+            ${log.details ? `<div class="json mono">${esc(log.details)}</div>` : `<span class="muted">—</span>`}
+          </td>
+          <td class="nowrap"><span class="muted">${esc(fmt(log.timestamp ?? ""))}</span></td>
         `;
         tbody.appendChild(tr);
       }
@@ -220,7 +253,14 @@
       document.getElementById("page-label").textContent = `Page ${page} / ${pages}`;
     }
 
+    let timer = null;
+    function startPolling(){
+      if (timer) clearInterval(timer);
+      timer = setInterval(fetchLogs, 5000); 
+    }
+
     fetchLogs();
+    startPolling();
   </script>
 </body>
 </html>
