@@ -2,38 +2,31 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <title>Task Manager – Logs (Admin)</title>
+  <title>Task Manager – My Logs</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="css/tasks.css" />
   <style>
-    .toolbar .btn-group{ display:flex; gap:8px; flex-wrap:wrap; }
-    .btn.toggle{ background:#fff; border:1px solid var(--border); }
-    .btn.toggle.active{ background:var(--primary); color:#fff; border-color:var(--primary); }
     .table-wrap{ overflow:auto; }
     table{ width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden; }
     thead th{ text-align:left; font-weight:600; font-size:14px; padding:12px; background:#f6f8ff; border-bottom:1px solid var(--border); white-space:nowrap; }
     tbody td{ padding:12px; border-bottom:1px solid var(--border); font-size:14px; vertical-align:top; }
     tbody tr:hover{ background:#fafcff; }
     .col-id{ width:84px; }
-    .col-user{ width:140px; white-space:nowrap; }
-    .col-action{ width:140px; white-space:nowrap; }
-    .col-resource{ width:160px; white-space:nowrap; }
+    .col-action{ width:160px; white-space:nowrap; }
+    .col-resource{ width:180px; white-space:nowrap; }
     .muted{ color:var(--muted); }
     .summary{ color:var(--muted); font-size:13px; }
     .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; }
     .nowrap{ white-space:nowrap; }
-    .pill{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--border); background:#f7f7ff; font-size:12px; }
-    .live{ display:inline-flex; gap:6px; align-items:center; }
-    .dot{ width:8px; height:8px; border-radius:50%; background:#6ee7a9; box-shadow:0 0 0 0 rgba(110,231,169,.8); animation:pulse 1.4s infinite; }
-    @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(110,231,169,.7)} 70%{box-shadow:0 0 0 9px rgba(110,231,169,0)} 100%{box-shadow:0 0 0 0 rgba(110,231,169,0)}}
     .json{ max-width:420px; max-height:60px; overflow:auto; background:#fbfbff; border:1px dashed var(--border); border-radius:8px; padding:6px 8px; }
+    .btn.toggle{ background:#fff; border:1px solid var(--border); }
+    .btn.toggle.active{ background:var(--primary); color:#fff; border-color:var(--primary); }
   </style>
 </head>
 <body>
   <header class="appbar">
-    <div class="brand">Logs</div>
+    <div class="brand">My Logs</div>
     <div class="actions">
-      <span id="live-ind" class="live"><span class="dot"></span><span class="small muted">Live</span></span>
       <button class="btn" id="refresh-btn">Yenile</button>
       <button class="btn" id="menu-btn">Menü</button>
       <button class="btn" id="logout-btn">Çıkış</button>
@@ -46,7 +39,7 @@
         <div class="filters">
           <div class="filter-group">
             <span class="group-title">Quick Range</span>
-            <div class="btn-group" id="range-buttons">
+            <div id="range-buttons">
               <button class="btn toggle" data-limit="10">Last 10</button>
               <button class="btn toggle active" data-limit="30">Last 30</button>
               <button class="btn toggle" data-limit="50">Last 50</button>
@@ -57,15 +50,13 @@
 
           <div class="filter-group">
             <span class="group-title">Search</span>
-            <input type="text" id="search" class="input" placeholder="Ara: actor/target/action/resource/resourceId" style="min-width:320px;" />
+            <input type="text" id="search" class="input" placeholder="Ara: action / resource / resourceId" style="min-width:280px;" />
           </div>
 
           <div class="filter-group">
             <span class="group-title">Fields</span>
-            <input type="number" id="f-actor" class="input" placeholder="actorUserId" style="width:120px;" />
-            <input type="number" id="f-target" class="input" placeholder="targetUserId" style="width:120px;" />
-            <input type="text"   id="f-action" class="input" placeholder="action" style="width:140px;" />
-            <input type="text"   id="f-resource" class="input" placeholder="resourceType" style="width:160px;" />
+            <input type="text" id="f-action" class="input" placeholder="action" style="width:160px;" />
+            <input type="text" id="f-resource" class="input" placeholder="resourceType" style="width:180px;" />
           </div>
         </div>
 
@@ -92,8 +83,6 @@
           <thead>
             <tr>
               <th class="col-id">ID</th>
-              <th class="col-user">Actor</th>
-              <th class="col-user">Target</th>
               <th class="col-action">Action</th>
               <th class="col-resource">Resource</th>
               <th>Resource ID</th>
@@ -114,18 +103,6 @@
     const token = localStorage.getItem("jwtToken");
     if (!token) location.href = "auth.html";
 
-    (function guard(){
-      try{
-        const p = JSON.parse(atob(token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
-        if (p.role !== "ROLE_ADMIN") { alert("Bu sayfaya erişim yetkiniz yok."); location.href="menu.html"; }
-      }catch{ location.href="auth.html"; }
-    })();
-
-    const ADMIN_LOGS_URLS = [
-      `${API_BASE}/admin/logs`, 
-      `${API_BASE}/logs`        
-    ];
-
     document.getElementById("menu-btn").addEventListener("click", ()=>location.href="menu.html");
     document.getElementById("logout-btn").addEventListener("click", ()=>{ localStorage.removeItem("jwtToken"); location.href="auth.html"; });
     document.getElementById("refresh-btn").addEventListener("click", fetchLogs);
@@ -142,16 +119,26 @@
         return res;
       });
     }
-
     const debounce = (fn,wait=300)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),wait); }; };
     const fmt = ts => { try { return new Date(ts).toLocaleString('tr-TR'); } catch { return ts; } };
     const esc = s => (s==null? "" : String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"));
+
+    function normalizeLog(l){
+      return {
+        id: l.id ?? null,
+        action: l.action ?? l.action_type ?? l.actionType ?? "",
+        resourceType: l.resource ?? l.resource_type ?? l.resourceType ?? "",
+        resourceId: l.resourceId ?? l.resource_id ?? null,
+        details: (typeof l.details === "string" ? l.details : (l.details ? JSON.stringify(l.details) : null)),
+        timestamp: l.timestamp ?? l.created_at ?? l.createdAt ?? null
+      };
+    }
 
     let allLogs = [];
     let page = 1, pageSize = 25;
     let currentLimit = 30;
     let textSearch = "";
-    const fieldFilters = { actor:null, target:null, action:"", resource:"" };
+    const fieldFilters = { action:"", resource:"" };
 
     document.getElementById("range-buttons").addEventListener("click", (e)=>{
       const btn = e.target.closest("button[data-limit]");
@@ -165,9 +152,8 @@
       document.querySelectorAll("#range-buttons .toggle").forEach(b=>b.classList.remove("active"));
       page=1; render();
     });
+
     document.getElementById("search").addEventListener("input", debounce(e=>{ textSearch = e.target.value.trim().toLowerCase(); page=1; render(); }, 250));
-    document.getElementById("f-actor").addEventListener("input", debounce(e=>{ fieldFilters.actor = e.target.value? Number(e.target.value) : null; page=1; render(); }, 250));
-    document.getElementById("f-target").addEventListener("input", debounce(e=>{ fieldFilters.target = e.target.value? Number(e.target.value) : null; page=1; render(); }, 250));
     document.getElementById("f-action").addEventListener("input", debounce(e=>{ fieldFilters.action = e.target.value.trim(); page=1; render(); }, 250));
     document.getElementById("f-resource").addEventListener("input", debounce(e=>{ fieldFilters.resource = e.target.value.trim(); page=1; render(); }, 250));
 
@@ -175,42 +161,17 @@
     document.getElementById("next").addEventListener("click", ()=>{ const total = getFiltered().length; const pages = Math.max(1, Math.ceil(total/pageSize)); if (page<pages){ page++; render(); }});
     document.getElementById("page-size").addEventListener("change", (e)=>{ pageSize = parseInt(e.target.value,10); page=1; render(); });
 
-    function normalizeLog(l){
-      return {
-        id: l.id ?? null,
-        actorUserId: l.actorUserId ?? l.userId ?? null,
-        targetUserId: l.targetUserId ?? null,
-        action: l.action ?? l.action_type ?? "",
-        resourceType: l.resource ?? l.resource_type ?? "",
-        resourceId: l.resourceId ?? null,
-        details: (typeof l.details === "string" ? l.details : (l.details ? JSON.stringify(l.details) : null)),
-        timestamp: l.timestamp ?? l.created_at ?? null
-      };
-    }
-
     async function fetchLogs(){
       try{
-        let data = null, lastOkUrl = null;
-        for (const url of ADMIN_LOGS_URLS){
-          const res = await authFetch(url);
-          if (res.ok){
-            data = await res.json();
-            lastOkUrl = url;
-            break;
-          }
-        }
-        if (!data) throw new Error("No logs endpoint responded");
-
-        allLogs = (Array.isArray(data)? data: [])
-          .map(normalizeLog)
-          .sort((a,b)=>{
-            const ta = a.timestamp || ""; const tb = b.timestamp || "";
-            return (tb > ta) ? 1 : (tb < ta ? -1 : 0);
-          });
-
+        const res = await authFetch(`${API_BASE}/logs/me`);
+        if (!res.ok) throw new Error(await res.text() || "Loglar alınamadı");
+        const data = await res.json();
+        allLogs = (Array.isArray(data)? data: []).map(normalizeLog).sort((a,b)=>{
+          const ta = a.timestamp || ""; const tb = b.timestamp || "";
+          return (tb > ta) ? 1 : (tb < ta ? -1 : 0);
+        });
         page = 1;
-        document.getElementById("updated").textContent =
-          `Güncellendi: ${new Date().toLocaleString()} (${lastOkUrl.endsWith('/admin/logs') ? 'ALL' : 'ME'})`;
+        document.getElementById("updated").textContent = "Güncellendi: " + new Date().toLocaleString();
         render();
       }catch(e){
         console.error(e); alert("Loglar alınırken hata oluştu.");
@@ -221,15 +182,13 @@
       let list = allLogs;
       if (textSearch){
         list = list.filter(l=>{
-          const hay = `${l.id??""} ${l.actorUserId??""} ${l.targetUserId??""} ${l.action??""} ${l.resourceType??""} ${l.resourceId??""}`.toLowerCase();
+          const hay = `${l.id??""} ${l.action??""} ${l.resourceType??""} ${l.resourceId??""}`.toLowerCase();
           return hay.includes(textSearch);
         });
       }
-      if (fieldFilters.actor != null)  list = list.filter(l => Number(l.actorUserId) === fieldFilters.actor);
-      if (fieldFilters.target != null) list = list.filter(l => Number(l.targetUserId) === fieldFilters.target);
-      if (fieldFilters.action)         list = list.filter(l => (l.action||"").toLowerCase().includes(fieldFilters.action.toLowerCase()));
-      if (fieldFilters.resource)       list = list.filter(l => (l.resourceType||"").toLowerCase().includes(fieldFilters.resource.toLowerCase()));
-      if (currentLimit != null)        list = list.slice(0, currentLimit);
+      if (fieldFilters.action)   list = list.filter(l => (l.action||"").toLowerCase().includes(fieldFilters.action.toLowerCase()));
+      if (fieldFilters.resource) list = list.filter(l => (l.resourceType||"").toLowerCase().includes(fieldFilters.resource.toLowerCase()));
+      if (currentLimit != null)  list = list.slice(0, currentLimit);
       return list;
     }
 
@@ -255,14 +214,10 @@
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td class="nowrap mono">#${esc(log.id)}</td>
-          <td class="nowrap"><span class="pill">actor:</span> <span class="mono">${esc(log.actorUserId ?? "-")}</span></td>
-          <td class="nowrap"><span class="pill">target:</span> <span class="mono">${esc(log.targetUserId ?? "-")}</span></td>
           <td class="nowrap">${esc(log.action || "-")}</td>
           <td class="nowrap">${esc(log.resourceType || "-")}</td>
           <td class="nowrap mono">${esc(log.resourceId ?? "-")}</td>
-          <td>
-            ${log.details ? `<div class="json mono">${esc(log.details)}</div>` : `<span class="muted">—</span>`}
-          </td>
+          <td>${log.details ? `<div class="json mono">${esc(log.details)}</div>` : `<span class="muted">—</span>`}</td>
           <td class="nowrap"><span class="muted">${esc(fmt(log.timestamp ?? ""))}</span></td>
         `;
         tbody.appendChild(tr);
@@ -271,24 +226,9 @@
       document.getElementById("page-label").textContent = `Page ${page} / ${pages}`;
     }
 
+    // İsteğe bağlı canlılık: 5 sn'de bir yenile
     let timer = null;
-    function startPolling(){
-      if (timer) clearInterval(timer);
-      timer = setInterval(fetchLogs, 5000);
-    }
-    function stopPolling(){
-      if (timer) { clearInterval(timer); timer = null; }
-    }
-
-    document.addEventListener('visibilitychange', ()=>{
-      if (document.hidden) {
-        stopPolling();
-      } else {
-        fetchLogs();
-        startPolling();
-      }
-    });
-
+    function startPolling(){ if (timer) clearInterval(timer); timer = setInterval(fetchLogs, 5000); }
     fetchLogs();
     startPolling();
   </script>
