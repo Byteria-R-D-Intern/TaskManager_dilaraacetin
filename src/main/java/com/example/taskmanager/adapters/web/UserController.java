@@ -79,10 +79,9 @@ public class UserController {
         registerUserUseCase.deleteUser(id);
         actionLogService.log(
             (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal(),
-            "DELETE",
-            "User",
-            id
+            id, "DELETE", "User", id
         );
+
 
         return ResponseEntity.noContent().build();
     }

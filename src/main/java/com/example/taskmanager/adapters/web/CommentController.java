@@ -19,6 +19,7 @@ import com.example.taskmanager.application.usecases.CommentService;
 import com.example.taskmanager.domain.model.Comment;
 import com.example.taskmanager.domain.model.User;
 import com.example.taskmanager.domain.ports.UserRepository;
+import com.example.taskmanager.application.usecases.ActionLogService;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -29,35 +30,44 @@ import jakarta.validation.Valid;
 public class CommentController {
 
     private final CommentService commentService;
-    private final UserRepository userRepository; // <— eklendi
+    private final UserRepository userRepository; 
+    private final ActionLogService actionLogService;
 
-    public CommentController(CommentService commentService, UserRepository userRepository) {
+    public CommentController(CommentService commentService, UserRepository userRepository, ActionLogService actionLogService) {
         this.commentService = commentService;
         this.userRepository = userRepository;
+        this.actionLogService = actionLogService;
     }
 
     @PostMapping
-    public ResponseEntity<CommentResponse> addComment(@PathVariable Long taskId,
-                                                      @Valid @RequestBody CommentRequest request,
-                                                      Authentication authentication) {
-        Long userId = (Long) authentication.getPrincipal();
+public ResponseEntity<CommentResponse> addComment(@PathVariable Long taskId,
+                                                  @Valid @RequestBody CommentRequest request,
+                                                  Authentication authentication) {
+    Long userId = (Long) authentication.getPrincipal();
 
-        Comment comment = commentService.addComment(taskId, userId, request.getContent());
+    // Önce yorumu oluştur
+    Comment comment = commentService.addComment(taskId, userId, request.getContent());
 
-        String username = userRepository.findById(comment.getUserId())
-                .map(User::getUsername)
-                .orElse("Unknown");
+    // Sonra ID belli olduktan sonra logla (ve Notification üretilecek)
+    actionLogService.log(userId, "CREATE_COMMENT", "Comment", comment.getId());
+    // Eğer 5 parametreli sürümü de eklediysen ve hedef kullanıcıya da bildirim istiyorsan:
+    // actionLogService.log(userId, comment.getUserId(), "CREATE_COMMENT", "Comment", comment.getId());
 
-        CommentResponse response = new CommentResponse(
+    String username = userRepository.findById(comment.getUserId())
+            .map(User::getUsername)
+            .orElse("Unknown");
+
+    CommentResponse response = new CommentResponse(
             comment.getId(),
             comment.getUserId(),
-            username,                // <—
+            username,
             comment.getContent(),
             comment.getTimestamp()
-        );
+    );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    return ResponseEntity.status(HttpStatus.CREATED).body(response);
+}
+
 
     @GetMapping
     public ResponseEntity<List<CommentResponse>> getComments(@PathVariable Long taskId) {

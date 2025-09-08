@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Task Manager – Notifications</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/tasks.css" />
+  <style>
+    .table-wrap{ overflow:auto; }
+    table{ width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+    thead th{ text-align:left; font-weight:600; font-size:14px; padding:12px; background:#f6f8ff; border-bottom:1px solid var(--border); white-space:nowrap; }
+    tbody td{ padding:12px; border-bottom:1px solid var(--border); font-size:14px; vertical-align:top; }
+    tbody tr:hover{ background:#fafcff; }
+    .col-id{ width:90px; }
+    .col-priority{ width:110px; white-space:nowrap; }
+    .col-bool{ width:90px; white-space:nowrap; }
+    .col-date{ white-space:nowrap; }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; }
+    .pill{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--border); background:#f7f7ff; font-size:12px; }
+    .badge-pri-LOW{ background:var(--green); border-color:#a5e8b0; color:#0f5132; }
+    .badge-pri-MEDIUM{ background:var(--yellow); border-color:#fbd38d; color:#7c4a03; }
+    .badge-pri-HIGH{ background:var(--pink); border-color:#f6a8b9; color:#8b1d2c; }
+    .badge-read-yes{ background:#ecfdf5; border-color:#a7f3d0; color:#065f46; }
+    .badge-read-no{ background:#fff7ed; border-color:#fde68a; color:#92400e; }
+    .json{ max-width:420px; max-height:72px; overflow:auto; background:#fbfbff; border:1px dashed var(--border); border-radius:8px; padding:6px 8px; }
+    .toolbar .btn-group{ display:flex; gap:8px; flex-wrap:wrap; }
+    .btn.toggle{ background:#fff; border:1px solid var(--border); }
+    .btn.toggle.active{ background:var(--primary); color:#fff; border-color:var(--primary); }
+    .summary{ color:var(--muted); font-size:13px; }
+  </style>
+</head>
+<body>
+  <header class="appbar">
+    <div class="brand">Notifications</div>
+    <div class="actions">
+      <button class="btn" id="refresh-btn">Yenile</button>
+      <button class="btn" id="menu-btn">Menü</button>
+      <button class="btn" id="logout-btn">Çıkış</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="toolbar">
+        <div class="filters">
+          <div class="filter-group">
+            <span class="group-title">Quick Range</span>
+            <div id="range-buttons" class="btn-group">
+              <button class="btn toggle" data-limit="10">Last 10</button>
+              <button class="btn toggle active" data-limit="30">Last 30</button>
+              <button class="btn toggle" data-limit="50">Last 50</button>
+              <button class="btn toggle" data-limit="100">Last 100</button>
+              <button class="btn" id="clear-range" title="Tümünü göster">Clear</button>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <span class="group-title">Search</span>
+            <input type="text" id="search" class="input" placeholder="Ara: type/title/body/id/user/actor/target/resourceId" style="min-width:320px;" />
+          </div>
+
+          <div class="filter-group">
+            <span class="group-title">Fields</span>
+            <input type="number" id="f-user" class="input" placeholder="userId" style="width:120px;" />
+            <input type="number" id="f-actor" class="input" placeholder="actorUserId" style="width:120px;" />
+            <input type="number" id="f-target" class="input" placeholder="targetUserId" style="width:120px;" />
+            <input type="text" id="f-type" class="input" placeholder="type" style="width:160px;" />
+            <select id="f-priority" class="input" style="width:140px;">
+              <option value="">priority: all</option>
+              <option value="LOW">LOW</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="HIGH">HIGH</option>
+            </select>
+            <select id="f-read" class="input" style="width:140px;">
+              <option value="">read: all</option>
+              <option value="1">read</option>
+              <option value="0">unread</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <span class="group-title">Paging</span>
+          <div>
+            <button class="btn" id="prev">&larr; Prev</button>
+            <span id="page-label" class="summary">Page 1 / 1</span>
+            <button class="btn" id="next">Next &rarr;</button>
+            <select id="page-size" class="input" style="width:120px;">
+              <option value="10">10 / page</option>
+              <option value="25" selected>25 / page</option>
+              <option value="50">50 / page</option>
+              <option value="100">100 / page</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary" id="updated" style="margin:6px 0 12px;"></div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-id">ID</th>
+              <th>User ID</th>
+              <th>Actor</th>
+              <th>Target</th>
+              <th>Type</th>
+              <th>Title</th>
+              <th>Body</th>
+              <th class="col-priority">Priority</th>
+              <th class="col-bool">Read?</th>
+              <th class="col-date">Read At</th>
+              <th>Source Log ID</th>
+              <th class="col-date">Created At</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+      <div id="empty" class="empty" style="display:none;">Kayıt bulunamadı.</div>
+    </section>
+  </main>
+
+  <script>
+  const API_BASE = "http://localhost:8080/api";
+  const token = localStorage.getItem("jwtToken");
+  if (!token) { window.location.href = "auth.html"; }
+
+  document.getElementById("menu-btn").addEventListener("click", ()=>location.href="menu.html");
+  document.getElementById("logout-btn").addEventListener("click", ()=>{ localStorage.removeItem("jwtToken"); location.href="auth.html"; });
+  document.getElementById("refresh-btn").addEventListener("click", fetchNotifications);
+
+  function authFetch(url, options = {}) {
+    const headers = options.headers || {};
+    return fetch(url, {
+      ...options,
+      headers: { 
+        ...headers, 
+        "Authorization": `Bearer ${token}`, 
+        ...(options.method && options.method!=="GET" ? {"Content-Type":"application/json"} : {}) 
+      }
+    }).then(async res=>{
+      if (res.status === 401 || res.status === 403) {
+        alert("Oturum süresi doldu / yetki yok."); 
+        localStorage.removeItem("jwtToken"); 
+        location.href="auth.html"; 
+        throw new Error("Unauthorized");
+      }
+      return res;
+    });
+  }
+
+  const esc = s => (s==null? "" : String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;"));
+  const fmt = ts => { try { return ts ? new Date(ts).toLocaleString('tr-TR') : ""; } catch { return ts || ""; } };
+  const debounce = (fn,wait=300)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),wait); }; };
+
+  function N(x){ return {
+    id:            x.id ?? null,
+    userId:        x.userId ?? x.user_id ?? null,
+    actorUserId:   x.actorUserId ?? x.actor_user_id ?? null,
+    targetUserId:  x.targetUserId ?? x.target_user_id ?? null,
+    type:          x.type ?? "",
+    title:         x.title ?? "",
+    body:          x.body ?? null,
+    priority:      x.priority ?? "",
+    read:          (typeof x.read === "boolean") ? x.read : (typeof x.is_read !== "undefined" ? !!x.is_read : false),
+    readAt:        x.readAt ?? x.read_at ?? null,
+    sourceLogId:   x.sourceLogId ?? x.source_log_id ?? null,
+    createdAt:     x.createdAt ?? x.created_at ?? x.timestamp ?? null
+  };}
+
+  let all = [];
+  let page = 1, pageSize = 25;
+  let currentLimit = 30;
+
+  let textSearch = "";
+  const field = { user:null, actor:null, target:null, type:"", priority:"", read:"" };
+
+  document.getElementById("range-buttons").addEventListener("click", (e)=>{
+    const btn = e.target.closest("button[data-limit]");
+    if (!btn) return;
+    currentLimit = parseInt(btn.dataset.limit,10);
+    document.querySelectorAll("#range-buttons .toggle").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active"); page=1; render();
+  });
+  document.getElementById("clear-range").addEventListener("click", ()=>{
+    currentLimit = null;
+    document.querySelectorAll("#range-buttons .toggle").forEach(b=>b.classList.remove("active"));
+    page=1; render();
+  });
+
+  document.getElementById("search").addEventListener("input", debounce(e=>{ textSearch = e.target.value.trim().toLowerCase(); page=1; render(); }, 250));
+  document.getElementById("f-user").addEventListener("input", debounce(e=>{ field.user = e.target.value? Number(e.target.value) : null; page=1; render(); }, 250));
+  document.getElementById("f-actor").addEventListener("input", debounce(e=>{ field.actor = e.target.value? Number(e.target.value) : null; page=1; render(); }, 250));
+  document.getElementById("f-target").addEventListener("input", debounce(e=>{ field.target = e.target.value? Number(e.target.value) : null; page=1; render(); }, 250));
+  document.getElementById("f-type").addEventListener("input", debounce(e=>{ field.type = e.target.value.trim(); page=1; render(); }, 250));
+  document.getElementById("f-priority").addEventListener("change", e=>{ field.priority = e.target.value; page=1; render(); });
+  document.getElementById("f-read").addEventListener("change", e=>{ field.read = e.target.value; page=1; render(); });
+
+  document.getElementById("prev").addEventListener("click", ()=>{ if (page>1){ page--; render(); }});
+  document.getElementById("next").addEventListener("click", ()=>{ const total = getFiltered().length; const pages = Math.max(1, Math.ceil(total/pageSize)); if (page<pages){ page++; render(); }});
+  document.getElementById("page-size").addEventListener("change", (e)=>{ pageSize = parseInt(e.target.value,10); page=1; render(); });
+
+  async function fetchNotifications(){
+    try{
+      const res = await authFetch(`${API_BASE}/logs/notifications`);
+      if (!res.ok) throw new Error(await res.text() || "Bildirimler alınamadı");
+      const data = await res.json();
+      all = (Array.isArray(data)? data: []).map(N).sort((a,b)=>{
+        const ta = a.createdAt || ""; const tb = b.createdAt || "";
+        return (tb > ta) ? 1 : (tb < ta ? -1 : 0);
+      });
+      page=1;
+      document.getElementById("updated").textContent = "Güncellendi: " + new Date().toLocaleString();
+      render();
+    }catch(e){
+      console.error(e); alert("Bildirimler alınırken hata oluştu.");
+    }
+  }
+
+  function getFiltered(){
+    let list = all;
+    if (textSearch){
+      list = list.filter(n=>{
+        const hay = `${n.id??""} ${n.userId??""} ${n.actorUserId??""} ${n.targetUserId??""} ${n.type??""} ${n.title??""} ${n.body??""} ${n.priority??""} ${n.sourceLogId??""}`.toLowerCase();
+        return hay.includes(textSearch);
+      });
+    }
+    if (field.user != null)   list = list.filter(n => Number(n.userId) === field.user);
+    if (field.actor != null)  list = list.filter(n => Number(n.actorUserId) === field.actor);
+    if (field.target != null) list = list.filter(n => Number(n.targetUserId) === field.target);
+    if (field.type)           list = list.filter(n => (n.type||"").toLowerCase().includes(field.type.toLowerCase()));
+    if (field.priority)       list = list.filter(n => (n.priority||"") === field.priority);
+    if (field.read !== "")    list = list.filter(n => (n.read ? "1" : "0") === field.read);
+    if (currentLimit != null) list = list.slice(0, currentLimit);
+    return list;
+  }
+
+  function render(){
+    const tbody = document.getElementById("tbody");
+    const empty = document.getElementById("empty");
+    tbody.innerHTML = "";
+
+    const data = getFiltered();
+    if (!data.length){
+      empty.style.display = "";
+      document.getElementById("page-label").textContent = "Page 1 / 1";
+      return;
+    }
+    empty.style.display = "none";
+
+    const pages = Math.max(1, Math.ceil(data.length / pageSize));
+    if (page > pages) page = pages;
+    const start = (page-1)*pageSize;
+    const end = start + pageSize;
+
+    for (const n of data.slice(start,end)){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="mono">#${esc(n.id)}</td>
+        <td class="mono">${esc(n.userId ?? "-")}</td>
+        <td class="mono">${esc(n.actorUserId ?? "-")}</td>
+        <td class="mono">${esc(n.targetUserId ?? "-")}</td>
+        <td>${esc(n.type || "-")}</td>
+        <td>${esc(n.title || "-")}</td>
+        <td>${n.body ? `<div class="json mono">${esc(n.body)}</div>` : `<span class="muted">—</span>`}</td>
+        <td><span class="pill ${"badge-pri-"+(n.priority||"").toUpperCase()}">${esc(n.priority || "-")}</span></td>
+        <td><span class="pill ${n.read ? "badge-read-yes" : "badge-read-no"}">${n.read ? "read" : "unread"}</span></td>
+        <td class="mono">${esc(fmt(n.readAt)) || "<span class='muted'>—</span>"}</td>
+        <td class="mono">${esc(n.sourceLogId ?? "-")}</td>
+        <td class="mono">${esc(fmt(n.createdAt))}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    document.getElementById("page-label").textContent = `Page ${page} / ${pages}`;
+  }
+
+  fetchNotifications();
+  let timer = setInterval(fetchNotifications, 5000);
+  document.addEventListener('visibilitychange', ()=>{
+    if (document.hidden) { clearInterval(timer); timer = null; }
+    else { fetchNotifications(); timer = setInterval(fetchNotifications, 5000); }
+  });
+</script>
+
+</body>
+</html>

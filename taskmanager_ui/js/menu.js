@@ -41,7 +41,7 @@ function wireLinks() {
   document.getElementById("link-stats")?.addEventListener("click", (e) => { e.preventDefault(); go("stats.html"); });
   document.getElementById("link-users")?.addEventListener("click", (e) => { e.preventDefault(); go("users-admin.html"); });
   document.getElementById("link-logs")?.addEventListener("click", (e) => { e.preventDefault(); go("logs.html"); });
-  document.getElementById("link-my-logs")?.addEventListener("click", (e)=>{ e.preventDefault(); window.location.href = "my-logs.html";});
+  document.getElementById("link-my-logs")?.addEventListener("click", (e)=>{ e.preventDefault(); window.location.href = "notifications.html"; });
   document.getElementById("link-home")?.addEventListener("click", (e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); });
   document.getElementById("link-contact")?.addEventListener("click", (e) => { e.preventDefault(); alert("İletişim: support@example.com"); });
 }
