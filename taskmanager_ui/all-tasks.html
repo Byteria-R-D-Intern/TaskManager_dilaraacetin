@@ -120,6 +120,7 @@
       for (const t of tasks){
         const li = document.createElement("li");
         li.className = `task status-${t.status}`;
+        li.setAttribute("data-id", String(t.id));       
         li.innerHTML = `
           <div class="row">
             <div class="title">${escapeHtml(t.title)}</div>
@@ -139,6 +140,24 @@
         `;
         list.appendChild(li);
       }
+
+      try{
+        const params = new URLSearchParams(location.search);
+        const targetId = params.get("taskId");
+        if (targetId){
+          const el = document.querySelector(`li.task[data-id="${CSS.escape(targetId)}"]`);
+          if (el){
+            el.scrollIntoView({ behavior:"smooth", block:"center" });
+            el.style.boxShadow = "0 0 0 3px rgba(141,165,248,.35), var(--shadow)";
+            el.style.transition = "box-shadow .3s ease, background .3s ease";
+            el.style.background = "#fcfdff";
+            setTimeout(()=>{
+              el.style.boxShadow = "var(--shadow)";
+              el.style.background = "#fff";
+            }, 2200);
+          }
+        }
+      }catch(_){}
     }
 
     document.getElementById("task-list").addEventListener("click", async (e)=>{

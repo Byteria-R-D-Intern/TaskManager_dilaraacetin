@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.taskmanager.adapters.web.dto.CommentRequest;
 import com.example.taskmanager.adapters.web.dto.CommentResponse;
+import com.example.taskmanager.application.usecases.ActionLogService;
 import com.example.taskmanager.application.usecases.CommentService;
 import com.example.taskmanager.domain.model.Comment;
 import com.example.taskmanager.domain.model.User;
 import com.example.taskmanager.domain.ports.UserRepository;
-import com.example.taskmanager.application.usecases.ActionLogService;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -45,13 +45,10 @@ public ResponseEntity<CommentResponse> addComment(@PathVariable Long taskId,
                                                   Authentication authentication) {
     Long userId = (Long) authentication.getPrincipal();
 
-    // Önce yorumu oluştur
     Comment comment = commentService.addComment(taskId, userId, request.getContent());
 
-    // Sonra ID belli olduktan sonra logla (ve Notification üretilecek)
     actionLogService.log(userId, "CREATE_COMMENT", "Comment", comment.getId());
-    // Eğer 5 parametreli sürümü de eklediysen ve hedef kullanıcıya da bildirim istiyorsan:
-    // actionLogService.log(userId, comment.getUserId(), "CREATE_COMMENT", "Comment", comment.getId());
+
 
     String username = userRepository.findById(comment.getUserId())
             .map(User::getUsername)
@@ -77,7 +74,7 @@ public ResponseEntity<CommentResponse> addComment(@PathVariable Long taskId,
             .map(c -> new CommentResponse(
                 c.getId(),
                 c.getUserId(),
-                userRepository.findById(c.getUserId()).map(User::getUsername).orElse("Unknown"), // <—
+                userRepository.findById(c.getUserId()).map(User::getUsername).orElse("Unknown"), 
                 c.getContent(),
                 c.getTimestamp()
             ))

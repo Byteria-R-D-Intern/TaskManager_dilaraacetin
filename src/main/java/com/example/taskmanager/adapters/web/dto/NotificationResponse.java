@@ -3,24 +3,33 @@ package com.example.taskmanager.adapters.web.dto;
 import java.time.LocalDateTime;
 
 public class NotificationResponse {
+
     private Long id;
-    private Long userId;
-    private Long actorUserId;   
-    private Long targetUserId;  
+    private Long actorUserId;
+    private Long targetUserId;
     private String type;
     private String title;
-    private String body;        
+    private String body;
     private String priority;
     private boolean read;
-    private LocalDateTime readAt;      
-    private Long sourceLogId;          
+    private LocalDateTime readAt;
+    private Long sourceLogId;
     private LocalDateTime createdAt;
 
-    public NotificationResponse(Long id, Long userId, Long actorUserId, Long targetUserId,
-                                String type, String title, String body, String priority,
-                                boolean read, LocalDateTime readAt, Long sourceLogId, LocalDateTime createdAt) {
+    public NotificationResponse() { }
+
+    public NotificationResponse(Long id,
+                                Long actorUserId,
+                                Long targetUserId,
+                                String type,
+                                String title,
+                                String body,
+                                String priority,
+                                boolean read,
+                                LocalDateTime readAt,
+                                Long sourceLogId,
+                                LocalDateTime createdAt) {
         this.id = id;
-        this.userId = userId;
         this.actorUserId = actorUserId;
         this.targetUserId = targetUserId;
         this.type = type;
@@ -34,7 +43,6 @@ public class NotificationResponse {
     }
 
     public Long getId() { return id; }
-    public Long getUserId() { return userId; }
     public Long getActorUserId() { return actorUserId; }
     public Long getTargetUserId() { return targetUserId; }
     public String getType() { return type; }

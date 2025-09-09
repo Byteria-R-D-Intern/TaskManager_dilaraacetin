@@ -3,30 +3,55 @@ package com.example.taskmanager.domain.model;
 import java.time.LocalDateTime;
 
 public class Notification {
+
     private Long id;
-    private Long userId;        
-    private Long actorUserId;   
-    private Long targetUserId;  
-    private String type;        
-    private String title;      
-    private String body;        
-    private String priority;    
+    private Long actorUserId;
+    private Long targetUserId;
+    private String type;
+    private String title;
+    private String body;          
+    private String priority;     
     private boolean read;
     private LocalDateTime readAt;
-    private Long sourceLogId;   
+    private Long sourceLogId;     
     private LocalDateTime createdAt;
 
     public Notification() {}
-    public Notification(Long id, Long userId, Long actorUserId, Long targetUserId,
-                        String type, String title, String body, String priority,
-                        boolean read, LocalDateTime readAt, Long sourceLogId, LocalDateTime createdAt) {
-        this.id = id; this.userId = userId; this.actorUserId = actorUserId; this.targetUserId = targetUserId;
-        this.type = type; this.title = title; this.body = body; this.priority = priority;
-        this.read = read; this.readAt = readAt; this.sourceLogId = sourceLogId; this.createdAt = createdAt;
+
+    public Notification(Long id,
+                        Long actorUserId,
+                        Long targetUserId,
+                        String type,
+                        String title,
+                        String body,
+                        String priority,
+                        boolean read,
+                        LocalDateTime readAt,
+                        Long sourceLogId,
+                        LocalDateTime createdAt) {
+        this.id = id;
+        this.actorUserId = actorUserId;
+        this.targetUserId = targetUserId;
+        this.type = type;
+        this.title = title;
+        this.body = body;
+        this.priority = priority;
+        this.read = read;
+        this.readAt = readAt;
+        this.sourceLogId = sourceLogId;
+        this.createdAt = createdAt;
+    }
+
+    public boolean isUnread() {
+        return !read;
+    }
+
+    public void markAsRead(LocalDateTime when) {
+        this.read = true;
+        this.readAt = (when != null) ? when : LocalDateTime.now();
     }
 
     public Long getId() { return id; }
-    public Long getUserId() { return userId; }
     public Long getActorUserId() { return actorUserId; }
     public Long getTargetUserId() { return targetUserId; }
     public String getType() { return type; }
@@ -39,7 +64,6 @@ public class Notification {
     public LocalDateTime getCreatedAt() { return createdAt; }
 
     public void setId(Long id) { this.id = id; }
-    public void setUserId(Long userId) { this.userId = userId; }
     public void setActorUserId(Long actorUserId) { this.actorUserId = actorUserId; }
     public void setTargetUserId(Long targetUserId) { this.targetUserId = targetUserId; }
     public void setType(String type) { this.type = type; }

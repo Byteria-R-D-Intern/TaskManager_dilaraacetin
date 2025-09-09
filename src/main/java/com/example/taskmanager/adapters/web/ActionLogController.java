@@ -7,6 +7,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -33,21 +34,33 @@ public class ActionLogController {
 
     @GetMapping("/notifications")
     public ResponseEntity<List<NotificationResponse>> getMyNotifications(Authentication authentication) {
-        Long userId = (Long) authentication.getPrincipal();
-        return ResponseEntity.ok(notificationService.getNotificationsForUser(userId));
+        Long targetUserId = (Long) authentication.getPrincipal();
+        return ResponseEntity.ok(notificationService.getNotificationsForTargetUser(targetUserId));
+    }
+
+    @PostMapping("/notifications/{id}/read")
+    public ResponseEntity<Void> markAsRead(@PathVariable Long id, Authentication auth) {
+        Long targetUserId = (Long) auth.getPrincipal();
+        notificationService.markAsRead(id, targetUserId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/notifications/read-all")
+    public ResponseEntity<Void> markAllRead(Authentication auth) {
+        Long targetUserId = (Long) auth.getPrincipal();
+        notificationService.markAllAsRead(targetUserId);
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @GetMapping
     public ResponseEntity<List<ActionLogResponse>> getAllLogs() {
-        List<ActionLogResponse> logs = logService.getAllLogs();
-        return ResponseEntity.ok(logs);
+        return ResponseEntity.ok(logService.getAllLogs());
     }
 
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @GetMapping("/{userId}")
     public ResponseEntity<List<ActionLogResponse>> getLogsByUserId(@PathVariable Long userId) {
-        List<ActionLogResponse> logs = logService.getLogsByUserId(userId);
-        return ResponseEntity.ok(logs);
+        return ResponseEntity.ok(logService.getLogsByUserId(userId));
     }
 }

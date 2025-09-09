@@ -30,9 +30,7 @@ public class DeleteTaskService implements DeleteTaskUseCase {
     @Transactional
     @Override
     public void delete(Long id) {
-        // Önce task’e bağlı yorumları sil
         commentRepository.deleteByTaskId(id);
-        // Sonra task’i sil
         taskRepository.deleteById(id);
     }
 }
