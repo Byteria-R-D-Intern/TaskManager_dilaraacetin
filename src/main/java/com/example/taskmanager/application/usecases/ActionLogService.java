@@ -97,8 +97,8 @@ public class ActionLogService {
 
         Notification n = new Notification(
             null,
-            log.getActorUserId(),             
-            log.getTargetUserId(),           
+            log.getActorUserId(),
+            log.getTargetUserId(),
             type,
             (title == null || title.isBlank()) ? "Notification" : title,
             body,
@@ -121,6 +121,7 @@ public class ActionLogService {
     }
 
 
+    @Transactional(readOnly = true)
     public List<ActionLogResponse> getAllLogs() {
         return repository.findAll().stream()
             .map(log -> new ActionLogResponse(
@@ -133,6 +134,7 @@ public class ActionLogService {
             .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<ActionLogResponse> getLogsByUserId(Long userId) {
         return repository.findByActorUserIdOrderByTimestampDesc(userId).stream()
             .map(log -> new ActionLogResponse(
@@ -145,6 +147,7 @@ public class ActionLogService {
             .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<MyActionLogResponse> getMyLogs(Long userId) {
         var logs = repository.findByActorUserIdOrTargetUserIdOrderByTimestampDesc(userId, userId);
         return logs.stream().map(log -> new MyActionLogResponse(

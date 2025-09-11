@@ -5,6 +5,19 @@
   <title>Task Manager – My Tasks</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="css/tasks.css" />
+  <style>
+    /* --- Edit modal --- */
+    .modal-mask{ position:fixed; inset:0; background:rgba(0,0,0,.28); opacity:0; pointer-events:none; transition:opacity .18s ease; z-index:60; }
+    .modal{ display:none; position:fixed; inset:0; align-items:center; justify-content:center; z-index:70; }
+    .modal.open{ display:flex; }
+    .modal-mask.show{ opacity:1; pointer-events:auto; }
+    .modal-card{ width:620px; max-width:92vw; background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); overflow:hidden; }
+    .mc-head{ padding:12px 14px; border-bottom:1px dashed var(--border); display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .mc-body{ padding:12px 14px; display:grid; gap:10px; }
+    .mc-foot{ padding:12px 14px; border-top:1px dashed var(--border); display:flex; gap:8px; justify-content:flex-end; }
+    .two{ display:grid; gap:10px; grid-template-columns:1fr; }
+    @media (min-width:640px){ .two{ grid-template-columns:1fr 1fr; } }
+  </style>
 </head>
 <body>
   <header class="appbar">
@@ -52,6 +65,38 @@
     </section>
   </main>
 
+  <!-- Edit Modal -->
+  <div id="em-mask" class="modal-mask"></div>
+  <div id="em" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="em-title">
+      <div class="mc-head">
+        <div id="em-title" class="brand" style="font-weight:700;">Görevi Düzenle</div>
+        <button id="em-close" class="btn">Kapat</button>
+      </div>
+      <div class="mc-body">
+        <input id="em-title-input" class="input" placeholder="Başlık" />
+        <textarea id="em-desc-input" class="input" rows="4" placeholder="Açıklama"></textarea>
+        <div class="two">
+          <select id="em-status" class="input">
+            <option value="TODO">To Do</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="DONE">Done</option>
+          </select>
+          <select id="em-priority" class="input">
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+          </select>
+        </div>
+        <input id="em-due" type="date" class="input" placeholder="gg.aa.yyyy" />
+      </div>
+      <div class="mc-foot">
+        <button id="em-cancel" class="btn">İptal</button>
+        <button id="em-save" class="btn primary">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const API_BASE = "http://localhost:8080/api";
     const token = localStorage.getItem("jwtToken");
@@ -65,14 +110,10 @@
       const headers = options.headers || {};
       const res = await fetch(url, {
         ...options,
-        headers: {
-          ...headers,
-          "Authorization": `Bearer ${token}`,
-          ...(options.method && options.method !== "GET" ? { "Content-Type": "application/json" } : {})
-        }
+        headers: { ...headers, "Authorization": `Bearer ${token}`, ...(options.method && options.method !== "GET" ? {"Content-Type":"application/json"} : {}) }
       });
       if (res.status === 401 || res.status === 403) {
-        alert("Oturum süreniz doldu. Lütfen tekrar giriş yapın.");
+        alert("Oturum süresi doldu. Lütfen tekrar giriş yapın.");
         localStorage.removeItem("jwtToken");
         window.location.href = "auth.html";
         throw new Error("Unauthorized");
@@ -81,9 +122,10 @@
     }
 
     const filters = { status:"", priority:"", title:"" };
+    const debounce = (fn,wait=300)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),wait); }; };
+    const esc = s => (s==null? "" : String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"));
 
-    function debounce(fn, wait=300){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; }
-    function escapeHtml(str){ if(!str) return ""; return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+    let tasksCache = [];
 
     async function loadTasks(){
       try{
@@ -96,6 +138,7 @@
         const res = await authFetch(url);
         if (!res.ok) throw new Error(await res.text() || "Görevler yüklenemedi");
         const tasks = await res.json();
+        tasksCache = tasks;
         render(tasks);
       }catch(e){
         console.error(e); alert("Görevler alınırken hata oluştu.");
@@ -112,56 +155,57 @@
       for (const t of tasks){
         const li = document.createElement("li");
         li.className = `task status-${t.status}`;
-        li.setAttribute("data-id", String(t.id));          // <<< eklendi
+        li.dataset.id = t.id;
         li.innerHTML = `
           <div class="row">
-            <div class="title">${escapeHtml(t.title)}</div>
+            <div class="title">${esc(t.title)}</div>
             <div class="actions">
+              <button class="btn ghost btn-comments" data-id="${t.id}" data-title="${esc(t.title)}">Yorumlar</button>
+              <button class="btn btn-edit" data-id="${t.id}">Düzenle</button>
               <button class="btn danger btn-del" data-id="${t.id}">Sil</button>
             </div>
           </div>
-          <div class="desc">${escapeHtml(t.description || "")}</div>
+          <div class="desc">${esc(t.description || "")}</div>
           <div class="row">
             <div class="meta">
               <span class="badge ${t.status==='TODO'?'status-todo':t.status==='IN_PROGRESS'?'status-inprogress':'status-done'}">${t.status.replace('_',' ')}</span>
               <span class="badge ${t.priority==='LOW'?'pri-low':t.priority==='MEDIUM'?'pri-medium':'pri-high'}">Priority: ${t.priority}</span>
               ${t.dueDate ? `<span class="badge">Due: ${t.dueDate}</span>` : ""}
             </div>
-            <span class="small muted right">@${escapeHtml(t.username || 'Me')}</span>
+            <span class="small muted right">@${esc(t.username || 'Me')}</span>
           </div>
         `;
         list.appendChild(li);
       }
-
-      try{
-        const params = new URLSearchParams(location.search);
-        const targetId = params.get("taskId");
-        if (targetId){
-          const el = document.querySelector(`li.task[data-id="${CSS.escape(targetId)}"]`);
-          if (el){
-            el.scrollIntoView({ behavior:"smooth", block:"center" });
-            el.style.boxShadow = "0 0 0 3px rgba(141,165,248,.35), var(--shadow)";
-            el.style.transition = "box-shadow .3s ease, background .3s ease";
-            el.style.background = "#fcfdff";
-            setTimeout(()=>{
-              el.style.boxShadow = "var(--shadow)";
-              el.style.background = "#fff";
-            }, 2200);
-          }
-        }
-      }catch(_){}
     }
 
+    // Actions: edit / delete / comments
     document.getElementById("task-list").addEventListener("click", async (e)=>{
-      const btn = e.target.closest(".btn-del");
-      if (!btn) return;
-      const id = btn.dataset.id;
-      if (!confirm(`#${id} numaralı görevi silmek istiyor musun?`)) return;
-      try{
-        const res = await authFetch(`${API_BASE}/tasks/${encodeURIComponent(id)}`, { method:"DELETE" });
-        if (res.status === 204){ loadTasks(); }
-        else { alert(await res.text() || "Silinemedi"); }
-      }catch(err){ alert("Hata: " + (err.message || "silme")); }
+      const cm = e.target.closest(".btn-comments");
+      const edt = e.target.closest(".btn-edit");
+      const del = e.target.closest(".btn-del");
+
+      if (cm){
+        const id = Number(cm.dataset.id);
+        const title = cm.dataset.title || "";
+        window.openCommentsDrawer?.(id, title);
+        return;
+      }
+      if (edt){
+        const id = Number(edt.dataset.id);
+        const t = tasksCache.find(x=>Number(x.id)===id);
+        if (t) openEdit(t);
+        return;
+      }
+      if (del){
+        const id = e.target.dataset.id;
+        if (!confirm(`#${id} numaralı görevi silmek istiyor musun?`)) return;
+        try{
+          const res = await authFetch(`${API_BASE}/tasks/${encodeURIComponent(id)}`, { method:"DELETE" });
+          if (res.status === 204){ loadTasks(); }
+          else { alert(await res.text() || "Silinemedi"); }
+        }catch(err){ alert("Hata: " + (err.message || "silme")); }
+      }
     });
 
     document.getElementById("chip-status").addEventListener("click", (e)=>{
@@ -184,7 +228,6 @@
     const searchEl = document.getElementById("search-input");
     searchEl.addEventListener("input", debounce(()=>{ filters.title = searchEl.value.trim(); loadTasks(); }, 300));
     searchEl.addEventListener("keypress", (e)=>{ if (e.key === "Enter") e.preventDefault(); });
-
     document.getElementById("clear-filters").addEventListener("click", ()=>{
       filters.status = ""; filters.priority = ""; filters.title = "";
       document.querySelectorAll("#chip-status .chip, #chip-priority .chip").forEach((c,i)=>{
@@ -194,7 +237,65 @@
       loadTasks();
     });
 
+    // --- Edit modal logic ---
+    const em = document.getElementById("em");
+    const emMask = document.getElementById("em-mask");
+    const emClose = document.getElementById("em-close");
+    const emCancel = document.getElementById("em-cancel");
+    const emSave = document.getElementById("em-save");
+    const fTitle = document.getElementById("em-title-input");
+    const fDesc = document.getElementById("em-desc-input");
+    const fStatus = document.getElementById("em-status");
+    const fPriority = document.getElementById("em-priority");
+    const fDue = document.getElementById("em-due");
+    let editingId = null;
+
+    function openEdit(t){
+      editingId = t.id;
+      fTitle.value = t.title || "";
+      fDesc.value = t.description || "";
+      fStatus.value = t.status || "TODO";
+      fPriority.value = t.priority || "LOW";
+      fDue.value = (t.dueDate || "").substring(0,10);
+      em.classList.add("open");
+      emMask.classList.add("show");
+    }
+    function hideEdit(){
+      editingId = null;
+      em.classList.remove("open");
+      emMask.classList.remove("show");
+    }
+    emMask.addEventListener("click", hideEdit);
+    emClose.addEventListener("click", hideEdit);
+    emCancel.addEventListener("click", hideEdit);
+    document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') hideEdit(); });
+    hideEdit(); // sayfa açılışında gizli
+
+    emSave.addEventListener("click", async ()=>{
+      if (!editingId) return;
+      const payload = {
+        title: fTitle.value.trim(),
+        description: fDesc.value.trim(),
+        status: fStatus.value,
+        priority: fPriority.value,
+        dueDate: fDue.value || null
+      };
+      try{
+        const res = await authFetch(`${API_BASE}/tasks/${encodeURIComponent(editingId)}`, {
+          method:"PUT", body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(await res.text() || "Güncellenemedi");
+        hideEdit();
+        await loadTasks();
+      }catch(e){
+        alert("Hata: " + (e.message || "güncelleme"));
+      }
+    });
+
     loadTasks();
   </script>
+
+  <!-- Yorum çekmecesi ve API'si -->
+  <script src="js/comments.js"></script>
 </body>
 </html>

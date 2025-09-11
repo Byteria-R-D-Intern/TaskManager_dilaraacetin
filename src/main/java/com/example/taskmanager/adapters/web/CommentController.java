@@ -1,11 +1,12 @@
 package com.example.taskmanager.adapters.web;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,9 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.taskmanager.adapters.web.dto.CommentRequest;
 import com.example.taskmanager.adapters.web.dto.CommentResponse;
 import com.example.taskmanager.application.usecases.ActionLogService;
-import com.example.taskmanager.application.usecases.CommentService;
 import com.example.taskmanager.domain.model.Comment;
+import com.example.taskmanager.domain.model.Task;
 import com.example.taskmanager.domain.model.User;
+import com.example.taskmanager.domain.ports.CommentRepository;
+import com.example.taskmanager.domain.ports.TaskRepository;
 import com.example.taskmanager.domain.ports.UserRepository;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -29,57 +32,84 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/tasks/{taskId}/comments")
 public class CommentController {
 
-    private final CommentService commentService;
-    private final UserRepository userRepository; 
-    private final ActionLogService actionLogService;
+    private final CommentRepository commentRepository;
+    private final TaskRepository taskRepository;
+    private final UserRepository userRepository;
+    private final ActionLogService logService;
 
-    public CommentController(CommentService commentService, UserRepository userRepository, ActionLogService actionLogService) {
-        this.commentService = commentService;
+    public CommentController(CommentRepository commentRepository,
+                             TaskRepository taskRepository,
+                             UserRepository userRepository,
+                             ActionLogService logService) {
+        this.commentRepository = commentRepository;
+        this.taskRepository = taskRepository;
         this.userRepository = userRepository;
-        this.actionLogService = actionLogService;
+        this.logService = logService;
+    }
+
+    @GetMapping
+    public ResponseEntity<?> list(@PathVariable Long taskId, Authentication auth) {
+        Long callerId = (Long) auth.getPrincipal();
+        String role = currentRole();
+
+        Task task = taskRepository.findById(taskId).orElse(null);
+        if (task == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Task not found");
+
+        if (!canView(role, callerId, task)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
+        }
+
+        List<CommentResponse> out = commentRepository.findByTaskId(taskId)
+                .stream().map(this::toDto).toList();
+
+        return ResponseEntity.ok(out);
     }
 
     @PostMapping
-public ResponseEntity<CommentResponse> addComment(@PathVariable Long taskId,
-                                                  @Valid @RequestBody CommentRequest request,
-                                                  Authentication authentication) {
-    Long userId = (Long) authentication.getPrincipal();
+    public ResponseEntity<?> add(@PathVariable Long taskId,
+                                 @Valid @RequestBody CommentRequest req,
+                                 Authentication auth) {
+        Long callerId = (Long) auth.getPrincipal();
+        String role = currentRole();
 
-    Comment comment = commentService.addComment(taskId, userId, request.getContent());
+        Task task = taskRepository.findById(taskId).orElse(null);
+        if (task == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Task not found");
 
-    actionLogService.log(userId, "CREATE_COMMENT", "Comment", comment.getId());
+        if (!canWrite(role, callerId, task)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
+        }
 
+        Comment toSave = new Comment(null, taskId, callerId, req.getContent().trim(), LocalDateTime.now());
+        Comment saved = commentRepository.save(toSave);
 
-    String username = userRepository.findById(comment.getUserId())
-            .map(User::getUsername)
-            .orElse("Unknown");
+        // Log & bildirim (hedef: görev sahibi)
+        logService.log(callerId, task.getUserId(), "CREATE", "Comment", taskId);
 
-    CommentResponse response = new CommentResponse(
-            comment.getId(),
-            comment.getUserId(),
-            username,
-            comment.getContent(),
-            comment.getTimestamp()
-    );
+        return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved));
+    }
 
-    return ResponseEntity.status(HttpStatus.CREATED).body(response);
-}
-
-
-    @GetMapping
-    public ResponseEntity<List<CommentResponse>> getComments(@PathVariable Long taskId) {
-        List<Comment> comments = commentService.getCommentsForTask(taskId);
-
-        List<CommentResponse> responses = comments.stream()
-            .map(c -> new CommentResponse(
-                c.getId(),
-                c.getUserId(),
-                userRepository.findById(c.getUserId()).map(User::getUsername).orElse("Unknown"), 
-                c.getContent(),
-                c.getTimestamp()
-            ))
-            .collect(Collectors.toList());
-
-        return ResponseEntity.ok(responses);
+    // ---- helpers ----
+    private boolean isPrivileged(String role) {
+        return "ROLE_MANAGER".equals(role) || "ROLE_ADMIN".equals(role);
+    }
+    private boolean canView(String role, Long callerId, Task task) {
+        if (isPrivileged(role)) return true;
+        return task.getUserId().equals(callerId);
+    }
+    private boolean canWrite(String role, Long callerId, Task task) {
+        // yazma kuralı = görüntüleme kuralı
+        return canView(role, callerId, task);
+    }
+    private String currentRole() {
+        return SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities().stream().findFirst().map(Object::toString).orElse("");
+    }
+    private CommentResponse toDto(Comment c) {
+        String username = userRepository.findById(c.getUserId())
+                .map(User::getUsername).orElse("Unknown");
+        return new CommentResponse(
+                c.getId(), c.getTaskId(), c.getUserId(), username,
+                c.getContent(), c.getTimestamp()
+        );
     }
 }

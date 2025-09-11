@@ -117,6 +117,7 @@
           <div class="row">
             <div class="title">${escapeHtml(t.title)}</div>
             <div class="actions">
+              <button class="btn btn-comments" data-id="${t.id}" data-title="${escapeHtml(t.title)}">Yorumlar</button>
               <button class="btn danger btn-del" data-id="${t.id}">Sil</button>
             </div>
           </div>
@@ -135,6 +136,14 @@
     }
 
     document.getElementById("task-list").addEventListener("click", async (e)=>{
+      const btnC = e.target.closest(".btn-comments");
+      if (btnC){
+        const id = Number(btnC.dataset.id);
+        const title = btnC.dataset.title || "";
+        window.openCommentsDrawer(id, title);
+        return;
+      }
+
       const btn = e.target.closest(".btn-del");
       if (!btn) return;
       const id = btn.dataset.id;
@@ -179,5 +188,6 @@
 
     loadTasks();
   </script>
+  <script src="js/comments.js"></script>
 </body>
 </html>

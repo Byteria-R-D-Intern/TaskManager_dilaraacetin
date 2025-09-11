@@ -186,33 +186,27 @@ public class TaskController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteTask(@PathVariable Long id,
-                                        Authentication authentication) {
-        Long userId = (Long) authentication.getPrincipal();
+    public ResponseEntity<?> deleteTask(@PathVariable Long id, Authentication authentication) {
+        Long actorUserId = (Long) authentication.getPrincipal();
         String userRole = SecurityContextHolder.getContext().getAuthentication()
-                                                .getAuthorities().stream()
-                                                .findFirst().map(Object::toString).orElse("");
+                                            .getAuthorities().stream()
+                                            .findFirst().map(Object::toString).orElse("");
 
         Optional<Task> taskOpt = deleteTaskUseCase.getById(id);
-
-        if (taskOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Task not found");
-        }
+        if (taskOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Task not found");
 
         Task task = taskOpt.get();
-
-        boolean isOwner = task.getUserId().equals(userId);
+        boolean isOwner = task.getUserId().equals(actorUserId);
         boolean isPrivileged = userRole.equals("ROLE_MANAGER") || userRole.equals("ROLE_ADMIN");
-
-        if (!isOwner && !isPrivileged) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
-        }
+        if (!isOwner && !isPrivileged) return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
 
         deleteTaskUseCase.delete(task.getId());
-        logService.log(userId, "DELETE", "Task", task.getId());
+
+        logService.log(actorUserId, task.getUserId(), "DELETE", "Task", task.getId());
 
         return ResponseEntity.noContent().build();
     }
+
 
     @PreAuthorize("hasRole('ROLE_MANAGER') or hasRole('ROLE_ADMIN')")
     @GetMapping("/all")
