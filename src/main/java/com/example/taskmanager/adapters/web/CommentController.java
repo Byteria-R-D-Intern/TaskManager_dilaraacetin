@@ -82,13 +82,11 @@ public class CommentController {
         Comment toSave = new Comment(null, taskId, callerId, req.getContent().trim(), LocalDateTime.now());
         Comment saved = commentRepository.save(toSave);
 
-        // Log & bildirim (hedef: görev sahibi)
         logService.log(callerId, task.getUserId(), "CREATE", "Comment", taskId);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved));
     }
 
-    // ---- helpers ----
     private boolean isPrivileged(String role) {
         return "ROLE_MANAGER".equals(role) || "ROLE_ADMIN".equals(role);
     }
@@ -97,7 +95,6 @@ public class CommentController {
         return task.getUserId().equals(callerId);
     }
     private boolean canWrite(String role, Long callerId, Task task) {
-        // yazma kuralı = görüntüleme kuralı
         return canView(role, callerId, task);
     }
     private String currentRole() {

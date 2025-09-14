@@ -42,6 +42,7 @@
     .n-body{ flex:1; min-width:0; display:grid; gap:4px; }
     .n-title{ font-weight:700; line-height:1.25; }
     .n-text{ color:#374151; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .n-by{ color:var(--muted); font-size:12px; } 
     .n-meta{ display:flex; gap:8px; align-items:center; color:var(--muted); font-size:12px; flex-wrap:wrap; }
     .n-chip{
       display:inline-flex; align-items:center; gap:6px;
@@ -157,9 +158,10 @@
 
     function N(x){ return {
       id:            x.id ?? null,
-      userId:        x.userId ?? x.user_id ?? null,
       actorUserId:   x.actorUserId ?? x.actor_user_id ?? null,
+      actorUsername: x.actorUsername ?? x.actor_username ?? null,
       targetUserId:  x.targetUserId ?? x.target_user_id ?? null,
+      targetUsername:x.targetUsername ?? x.target_username ?? null,
       type:          x.type ?? "",
       title:         x.title ?? "",
       body:          x.body ?? null,
@@ -255,11 +257,16 @@
           div.className = `notif ${n.read? "" : "unread"}`;
           div.setAttribute("data-id", n.id);
 
+          const byStr = n.actorUsername
+            ? `by ${n.actorUsername}`
+            : (n.actorUserId != null ? `by #${n.actorUserId}` : "");
+
           div.innerHTML = `
             <div class="${cls}" aria-hidden="true">${sym}</div>
             <div class="n-body">
               <div class="n-title">${esc(n.title || "(başlık yok)")}</div>
               <div class="n-text">${n.body ? esc(n.body) : ""}</div>
+              ${byStr ? `<div class="n-by">${esc(byStr)}</div>` : ""}
               <div class="n-meta">
                 <span class="small muted">${esc(n.type || "-")}</span>
                 <span class="n-chip pri-${(n.priority||"").toUpperCase()}">${esc(n.priority || "-")}</span>
@@ -305,28 +312,41 @@
       }catch(e){ alert("Hata: " + (e.message || "Mark all read")); }
     }
 
+
     function parseTarget(n){
       const t = (n.type||"").toUpperCase();
-      const resource = t.split("_")[0] || "";
+      const resource = (t.split("_")[0] || "").trim(); 
       let id = null;
-      const m = (n.title||"").match(/\(ID:\s*(\d+)\)/i);
-      if (m) id = Number(m[1]);
-      try{
-        if (!id && n.body && n.body.trim().startsWith("{")){
+
+      const mTitle = (n.title||"").match(/\(ID:\s*(\d+)\)/i);
+      if (mTitle) id = Number(mTitle[1]);
+
+      if (!id && n.body && n.body.trim().startsWith("{")){
+        try{
           const j = JSON.parse(n.body);
-          if (typeof j.taskId === "number") id = j.taskId;
-          if (typeof j.resourceId === "number") id = j.resourceId;
-        }
-      }catch(_){}
+          const keys = ["taskId","task_id","resourceId","resource_id","parentTaskId","parent_task_id","id"];
+          for (const k of keys){ if (typeof j[k] === "number"){ id = j[k]; break; } }
+        }catch(_){}
+      }
+
+      if (!id && n.body){
+        const m1 = n.body.match(/task\s*id[\s:#]*?(\d+)/i);
+        const m2 = n.body.match(/task\s*[#\(]?\s*(\d+)/i);
+        const m3 = n.body.match(/\bID[:\s]*?(\d+)\b/i);
+        const m = m1 || m2 || m3;
+        if (m) id = Number(m[1]);
+      }
+
       return { resource, id };
     }
 
     function goToNotification(n){
       const { resource, id } = parseTarget(n);
+      const openComments = (resource === "COMMENT");
 
-      if (resource === "TASK"){
-        const url = id ? `my-tasks.html?taskId=${encodeURIComponent(id)}` : `my-tasks.html`;
-        window.location.href = url;
+      if (resource === "TASK" || openComments){
+        const q = id ? `?taskId=${encodeURIComponent(id)}${openComments ? "&open=comments" : ""}` : "";
+        window.location.href = `my-tasks.html${q}`;
       }
     }
 

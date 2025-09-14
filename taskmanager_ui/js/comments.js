@@ -1,10 +1,8 @@
-// taskmanager_ui/js/comments.js
 (function(){
   const API_BASE = "http://localhost:8080/api";
   const token = localStorage.getItem("jwtToken");
   if (!token) { return; }
 
-  // inject minimal styles
   const style = document.createElement("style");
   style.textContent = `
   .c-mask{position:fixed; inset:0; background:rgba(0,0,0,.28); opacity:0; pointer-events:none; transition:opacity .18s ease; z-index:80;}
@@ -24,7 +22,6 @@
   `;
   document.head.appendChild(style);
 
-  // drawer DOM
   const mask = document.createElement("div");
   mask.className = "c-mask";
   const drawer = document.createElement("aside");
@@ -109,7 +106,7 @@
   }
 
   async function sendComment(taskId, text){
-    const payload = { content: text }; // backend 'text' bekliyorsa dönüştürmek kolay
+    const payload = { content: text }; 
     const res = await authFetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/comments`, {
       method:"POST",
       body: JSON.stringify(payload)
@@ -135,7 +132,6 @@
     }
   });
 
-  // public api
   window.openCommentsDrawer = function(taskId, taskTitle){
     currentTaskId = taskId;
     drawer.querySelector("#c-title").textContent = `Yorumlar • #${taskId} – ${taskTitle||""}`;

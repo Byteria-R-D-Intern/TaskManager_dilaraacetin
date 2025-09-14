@@ -31,6 +31,12 @@ public class NotificationRepositoryImpl implements NotificationRepository {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<Notification> findById(Long id) {
+        return jpa.findById(id).map(NotificationMapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<Notification> findByIdAndTargetUserId(Long id, Long targetUserId) {
         return jpa.findByIdAndTargetUserId(id, targetUserId)
                   .map(NotificationMapper::toDomain);

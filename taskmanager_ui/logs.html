@@ -176,17 +176,18 @@
     document.getElementById("page-size").addEventListener("change", (e)=>{ pageSize = parseInt(e.target.value,10); page=1; render(); });
 
     function normalizeLog(l){
-      return {
-        id: l.id ?? null,
-        actorUserId: l.actorUserId ?? l.userId ?? null,
-        targetUserId: l.targetUserId ?? null,
-        action: l.action ?? l.action_type ?? "",
-        resourceType: l.resource ?? l.resource_type ?? "",
-        resourceId: l.resourceId ?? null,
-        details: (typeof l.details === "string" ? l.details : (l.details ? JSON.stringify(l.details) : null)),
-        timestamp: l.timestamp ?? l.created_at ?? null
-      };
-    }
+    return {
+      id:             l.id ?? l.logId ?? null,
+      actorUserId:    l.actorUserId ?? l.actor_user_id ?? l.userId ?? null,
+      targetUserId:   l.targetUserId ?? l.target_user_id ?? l.targetId ?? null,   
+      action:         l.action ?? l.action_type ?? "",
+      resourceType:   l.resourceType ?? l.resource ?? l.resource_type ?? "",
+      resourceId:     l.resourceId ?? l.resource_id ?? null,                       
+      details:        (typeof l.details === "string" ? l.details : (l.details ? JSON.stringify(l.details) : null)),
+      timestamp:      l.timestamp ?? l.createdAt ?? l.created_at ?? null
+    };
+  }
+
 
     async function fetchLogs(){
       try{

@@ -37,6 +37,7 @@ function wireLinks() {
 
   document.getElementById("link-tasks")?.addEventListener("click", (e) => { e.preventDefault(); go("my-tasks.html"); });
   document.getElementById("link-create")?.addEventListener("click", (e) => { e.preventDefault(); go("create-task.html"); });
+  document.getElementById("link-admin-create")?.addEventListener("click", (e)=>{ e.preventDefault(); window.location.href = "admin-create-task.html"; });
   document.getElementById("link-all")?.addEventListener("click", (e) => { e.preventDefault(); go("all-tasks.html"); });
   document.getElementById("link-stats")?.addEventListener("click", (e) => { e.preventDefault(); go("stats.html"); });
   document.getElementById("link-users")?.addEventListener("click", (e) => { e.preventDefault(); go("users-admin.html"); });

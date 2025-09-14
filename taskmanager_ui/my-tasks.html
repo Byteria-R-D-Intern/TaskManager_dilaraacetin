@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="css/tasks.css" />
   <style>
-    /* --- Edit modal --- */
     .modal-mask{ position:fixed; inset:0; background:rgba(0,0,0,.28); opacity:0; pointer-events:none; transition:opacity .18s ease; z-index:60; }
     .modal{ display:none; position:fixed; inset:0; align-items:center; justify-content:center; z-index:70; }
     .modal.open{ display:flex; }
@@ -65,7 +64,6 @@
     </section>
   </main>
 
-  <!-- Edit Modal -->
   <div id="em-mask" class="modal-mask"></div>
   <div id="em" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="em-title">
@@ -101,6 +99,11 @@
     const API_BASE = "http://localhost:8080/api";
     const token = localStorage.getItem("jwtToken");
     if (!token) { window.location.href = "auth.html"; }
+
+    const params = new URLSearchParams(location.search);
+    const initialTaskId = Number(params.get("taskId")) || null;
+    const initialOpen = (params.get("open") || "").toLowerCase();
+    let shouldOpenComments = !!(initialTaskId && initialOpen === "comments");
 
     document.getElementById("menu-btn").addEventListener("click", ()=> location.href="menu.html");
     document.getElementById("logout-btn").addEventListener("click", ()=>{ localStorage.removeItem("jwtToken"); location.href="auth.html"; });
@@ -140,6 +143,14 @@
         const tasks = await res.json();
         tasksCache = tasks;
         render(tasks);
+
+        if (shouldOpenComments) {
+          const t = tasksCache.find(x => Number(x.id) === Number(initialTaskId));
+          if (t && window.openCommentsDrawer) {
+            window.openCommentsDrawer(t.id, t.title || "");
+            shouldOpenComments = false; 
+          }
+        }
       }catch(e){
         console.error(e); alert("Görevler alınırken hata oluştu.");
       }
@@ -179,7 +190,6 @@
       }
     }
 
-    // Actions: edit / delete / comments
     document.getElementById("task-list").addEventListener("click", async (e)=>{
       const cm = e.target.closest(".btn-comments");
       const edt = e.target.closest(".btn-edit");
@@ -237,7 +247,6 @@
       loadTasks();
     });
 
-    // --- Edit modal logic ---
     const em = document.getElementById("em");
     const emMask = document.getElementById("em-mask");
     const emClose = document.getElementById("em-close");
@@ -269,7 +278,7 @@
     emClose.addEventListener("click", hideEdit);
     emCancel.addEventListener("click", hideEdit);
     document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') hideEdit(); });
-    hideEdit(); // sayfa açılışında gizli
+    hideEdit(); 
 
     emSave.addEventListener("click", async ()=>{
       if (!editingId) return;
@@ -295,7 +304,6 @@
     loadTasks();
   </script>
 
-  <!-- Yorum çekmecesi ve API'si -->
   <script src="js/comments.js"></script>
 </body>
 </html>

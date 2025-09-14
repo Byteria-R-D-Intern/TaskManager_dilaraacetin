@@ -2,70 +2,92 @@ package com.example.taskmanager.application.usecases;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.taskmanager.adapters.web.dto.NotificationResponse;
-import com.example.taskmanager.domain.exception.NotFoundException;
 import com.example.taskmanager.domain.model.Notification;
+import com.example.taskmanager.domain.model.User;
 import com.example.taskmanager.domain.ports.NotificationRepository;
+import com.example.taskmanager.domain.ports.UserRepository;
 
 @Service
 public class NotificationService {
 
-    private final NotificationRepository repo;
+    public enum MarkResult { UPDATED, FORBIDDEN, NOT_FOUND }
 
-    public NotificationService(NotificationRepository repo) {
-        this.repo = repo;
+    private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
+
+    public NotificationService(NotificationRepository notificationRepository,
+                               UserRepository userRepository) {
+        this.notificationRepository = notificationRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
     public List<NotificationResponse> getNotificationsForTargetUser(Long targetUserId) {
-        return repo.findByTargetUserIdOrderByCreatedAtDesc(targetUserId)
-                .stream()
-                .filter(n -> n.getActorUserId() == null || !n.getActorUserId().equals(n.getTargetUserId()))
-                .map(this::toDto)
-                .toList();
+        return notificationRepository.findByTargetUserIdOrderByCreatedAtDesc(targetUserId)
+            .stream()
+            .filter(n -> !Objects.equals(n.getActorUserId(), n.getTargetUserId()))
+            .map(this::toDtoWithUsernames)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public MarkResult markAsReadStrict(Long id, Long targetUserId) {
+        return notificationRepository.findByIdAndTargetUserId(id, targetUserId)
+            .map(n -> {
+                if (n.isUnread()) {
+                    n.markAsRead(LocalDateTime.now());
+                    notificationRepository.save(n);
+                }
+                return MarkResult.UPDATED;
+            })
+            .orElseGet(() -> notificationRepository.findById(id).isPresent()
+                ? MarkResult.FORBIDDEN
+                : MarkResult.NOT_FOUND);
     }
 
     @Transactional(readOnly = true)
-    public List<Notification> listForTargetUser(Long targetUserId) {
-        return repo.findByTargetUserIdOrderByCreatedAtDesc(targetUserId)
-                .stream()
-                .filter(n -> n.getActorUserId() == null || !n.getActorUserId().equals(n.getTargetUserId()))
-                .toList();
+    public NotificationResponse getNotificationForTarget(Long id, Long targetUserId) {
+        return notificationRepository.findByIdAndTargetUserId(id, targetUserId)
+                .map(this::toDtoWithUsernames)
+                .orElse(null);
     }
 
     @Transactional
-    public void markAsRead(Long notificationId, Long targetUserId) {
-        Notification n = repo.findByIdAndTargetUserId(notificationId, targetUserId)
-                .orElseThrow(() -> new NotFoundException("Notification not found"));
-        if (!n.isRead()) {
-            n.setRead(true);
-            n.setReadAt(LocalDateTime.now());
-            repo.save(n);
-        }
+    public int markAllAsRead(Long targetUserId) {
+        return notificationRepository.markAllAsReadByTargetUserId(targetUserId, LocalDateTime.now());
     }
 
-    @Transactional
-    public void markAllAsRead(Long targetUserId) {
-        repo.markAllAsReadByTargetUserId(targetUserId, LocalDateTime.now());
-    }
-
-    private NotificationResponse toDto(Notification n) {
+    private NotificationResponse toDtoWithUsernames(Notification n) {
+        String actorUsername  = usernameOf(n.getActorUserId());
+        String targetUsername = usernameOf(n.getTargetUserId());
         return new NotificationResponse(
-                n.getId(),
-                n.getActorUserId(),
-                n.getTargetUserId(),
-                n.getType(),
-                n.getTitle(),
-                n.getBody(),
-                n.getPriority(),
-                n.isRead(),
-                n.getReadAt(),
-                n.getSourceLogId(),
-                n.getCreatedAt()
+            n.getId(),
+            n.getActorUserId(),
+            actorUsername,
+            n.getTargetUserId(),
+            targetUsername,
+            n.getType(),
+            n.getTitle(),
+            n.getBody(),
+            n.getPriority(),
+            n.isRead(),
+            n.getReadAt(),
+            n.getSourceLogId(),
+            n.getCreatedAt()
         );
+    }
+
+    private String usernameOf(Long userId) {
+        if (userId == null) return null;
+        return userRepository.findById(userId)
+                .map(User::getUsername)
+                .orElse(null);
     }
 }

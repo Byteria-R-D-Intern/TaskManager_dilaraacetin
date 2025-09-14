@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Task Manager – Create For User (Admin)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/tasks.css" />
+</head>
+<body>
+  <header class="appbar">
+    <div class="brand">Create Task (Admin)</div>
+    <div class="actions">
+      <button class="btn" id="btn-users">Users</button>
+      <button class="btn" id="btn-all">All Tasks</button>
+      <button class="btn" id="btn-menu">Menü</button>
+      <button class="btn" id="btn-logout">Çıkış</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="toolbar">
+        <div class="filters">
+          <div class="filter-group">
+            <span class="group-title">Hedef Kullanıcı</span>
+            <select id="user-select" class="input" style="min-width:280px;">
+              <option value="">— kullanıcı seçin —</option>
+            </select>
+          </div>
+        </div>
+        <span id="updated" class="small muted"></span>
+      </div>
+
+      <form id="task-form" class="form-grid">
+        <input type="text" id="title" class="input" placeholder="Başlık" required />
+        <textarea id="description" class="input" rows="4" placeholder="Açıklama" required></textarea>
+        <div class="form-grid two">
+          <select id="status" class="input">
+            <option value="TODO">To Do</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="DONE">Done</option>
+          </select>
+          <select id="priority" class="input">
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+          </select>
+        </div>
+        <input type="date" id="dueDate" class="input" />
+        <div class="actions">
+          <button class="btn primary" type="submit">Oluştur</button>
+          <span id="msg" class="small muted"></span>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE = "http://localhost:8080/api";
+    const token = localStorage.getItem("jwtToken");
+    if (!token) { window.location.href = "auth.html"; }
+
+    const role = (()=>{ try{ const p=token.split(".")[1]; return JSON.parse(atob(p.replace(/-/g,"+").replace(/_/g,"/"))).role; }catch(_){ return null; } })();
+    if (role !== "ROLE_ADMIN"){ alert("Bu sayfa sadece admin içindir."); window.location.href = "menu.html"; }
+
+    document.getElementById("btn-users").addEventListener("click", ()=>location.href="users-admin.html");
+    document.getElementById("btn-all").addEventListener("click", ()=>location.href="all-tasks.html");
+    document.getElementById("btn-menu").addEventListener("click", ()=>location.href="menu.html");
+    document.getElementById("btn-logout").addEventListener("click", ()=>{ localStorage.removeItem("jwtToken"); location.href="auth.html"; });
+
+    async function authFetch(url, options = {}) {
+      const headers = options.headers || {};
+      const res = await fetch(url, {
+        ...options,
+        headers: { ...headers, "Authorization": `Bearer ${token}`, ...(options.method && options.method!=="GET" ? {"Content-Type":"application/json"} : {}) }
+      });
+      if (res.status === 401 || res.status === 403) {
+        alert("Oturum süresi doldu / yetki yok.");
+        localStorage.removeItem("jwtToken");
+        location.href="auth.html";
+        throw new Error("Unauthorized");
+      }
+      return res;
+    }
+
+    async function loadUsers(preselectId){
+      const sel = document.getElementById("user-select");
+      sel.innerHTML = `<option value="">— kullanıcı seçin —</option>`;
+      try{
+        const res = await authFetch(`${API_BASE}/admin/users`);
+        if (!res.ok) throw new Error(await res.text() || "Kullanıcı listesi alınamadı");
+        const users = await res.json();
+        users.forEach(u=>{
+          const opt = document.createElement("option");
+          opt.value = u.id;
+          opt.textContent = `#${u.id} • ${u.username || "-"} • ${u.email || "-"}`;
+          sel.appendChild(opt);
+        });
+        if (preselectId){
+          sel.value = String(preselectId);
+        }
+        document.getElementById("updated").textContent = "Kullanıcılar yüklendi: " + new Date().toLocaleString();
+      }catch(e){
+        alert("Kullanıcılar alınamadı: " + (e.message || e));
+      }
+    }
+
+    const urlParams = new URLSearchParams(location.search);
+    const qpUserId = urlParams.get("userId");
+    loadUsers(qpUserId);
+
+    document.getElementById("task-form").addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const userId = document.getElementById("user-select").value;
+      const msg = document.getElementById("msg");
+      msg.textContent = "";
+
+      if (!userId){ msg.textContent = "Lütfen hedef kullanıcıyı seçin."; return; }
+
+      const payload = {
+        title: document.getElementById("title").value.trim(),
+        description: document.getElementById("description").value.trim(),
+        status: document.getElementById("status").value,
+        priority: document.getElementById("priority").value
+      };
+      const due = document.getElementById("dueDate").value;
+      if (due) payload.dueDate = due;
+
+      try{
+        const res = await authFetch(`${API_BASE}/admin/tasks`, {
+            method: "POST",
+            body: JSON.stringify({
+                userId: Number(userId),                 
+                title: payload.title,
+                description: payload.description,
+                status: payload.status,
+                priority: payload.priority,
+                dueDate: payload.dueDate || null        
+            })
+            });
+
+        if (!res.ok) throw new Error(await res.text() || "Oluşturma başarısız");
+
+        msg.textContent = "Görev oluşturuldu!";
+        (e.target).reset();
+        document.getElementById("user-select").value = userId;
+      }catch(err){
+        msg.textContent = "Hata: " + (err.message || "oluşturulamadı");
+      }
+    });
+  </script>
+</body>
+</html>

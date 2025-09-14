@@ -10,6 +10,8 @@ public interface NotificationRepository {
 
     Notification save(Notification notification);
 
+    Optional<Notification> findById(Long id); 
+
     Optional<Notification> findByIdAndTargetUserId(Long id, Long targetUserId);
 
     List<Notification> findByTargetUserIdOrderByCreatedAtDesc(Long targetUserId);
