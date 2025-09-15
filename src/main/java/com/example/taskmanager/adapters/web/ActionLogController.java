@@ -1,7 +1,7 @@
 package com.example.taskmanager.adapters.web;
 
 import java.util.List;
-import java.util.Map; // <-- EKLE
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -45,22 +45,38 @@ public class ActionLogController {
     public ResponseEntity<?> markAsRead(@PathVariable Long id, Authentication auth) {
         Long me = (Long) auth.getPrincipal();
         MarkResult result = notificationService.markAsReadStrict(id, me);
-        if (result == MarkResult.UPDATED) {
-            NotificationResponse dto = notificationService.getNotificationForTarget(id, me);
 
-            return ResponseEntity.ok(dto);
+        switch (result) {
+            case UPDATED: {
+                NotificationResponse dto = notificationService.getNotificationForTarget(id, me);
+                return ResponseEntity.ok(dto); 
+            }
+            case FORBIDDEN:
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of(
+                                "error", "FORBIDDEN",
+                                "message", "You cannot mark this notification as read.",
+                                "id", id
+                        ));
+            case NOT_FOUND:
+            default:
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of(
+                                "error", "NOT_FOUND",
+                                "message", "Notification not found.",
+                                "id", id
+                        ));
         }
-        if (result == MarkResult.FORBIDDEN) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        return ResponseEntity.notFound().build();
     }
 
     @PostMapping("/notifications/read-all")
     public ResponseEntity<Map<String, Object>> markAllRead(Authentication auth) {
         Long me = (Long) auth.getPrincipal();
         int updated = notificationService.markAllAsRead(me);
-        return ResponseEntity.ok(Map.of("updated", updated));
+        return ResponseEntity.ok(Map.of(
+                "updated", updated,
+                "status", "OK"
+        ));
     }
 
     @PreAuthorize("hasRole('ROLE_ADMIN')")
